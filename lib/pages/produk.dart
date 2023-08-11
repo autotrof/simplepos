@@ -60,7 +60,20 @@ class _ProdukPageState extends State<ProdukPage> {
     }
   }
 
-  void addNewProduk() {
+  void showModalProduk({String type = 'create', Produk? produk}) {
+    _inputKodeProdukController.text = '';
+    _inputNamaProdukController.text = '';
+    _inputHargaProdukController.text = '';
+    _inputStokProdukController.text = '';
+    if (type == 'edit') {
+      _inputKodeProdukController.text = produk!.kode;
+      _inputNamaProdukController.text = produk.nama;
+      _inputHargaProdukController.text = produk.harga.toString();
+      if (produk.stok != null) {
+        _inputStokProdukController.text = produk.stok.toString();
+      }
+    }
+
     showModalBottomSheet(context: context, builder: (BuildContext ctx) {
       return Container(
         width: double.infinity,
@@ -148,8 +161,7 @@ class _ProdukPageState extends State<ProdukPage> {
                     child: ElevatedButton(
                       onPressed: () async {
                         await simpanProduk();
-                        Navigator.pop(ctx);
-                        alertSuccess(context: context, text: "Berhasil menyimpan produk");
+                        alertSuccess(context: ctx);
                       }, 
                       style: ButtonStyle(
                         foregroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorDark),
@@ -238,6 +250,7 @@ class _ProdukPageState extends State<ProdukPage> {
     for (Produk produk in _items) {
       tableBody.add(
         TableRow(
+          decoration: const BoxDecoration(color: Colors.white),
           children: [
             Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode)),
             Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.nama)),
@@ -248,7 +261,22 @@ class _ProdukPageState extends State<ProdukPage> {
               :
               Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(formatter.format(produk.stok).toString()))
             ),
-            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text('###')),
+            Container(
+              padding: const EdgeInsets.only(top: 3, left: 5),
+              child: Row(
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      shape: const BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(3))),
+                      backgroundColor: Theme.of(context).primaryColorLight
+                    ),
+                    onPressed: () => showModalProduk(type: 'edit', produk: produk), 
+                    child: const Text("Edit")
+                  ),
+                  const Expanded(child: Row()),
+                ],
+              )
+            ),
           ]
         )
       );
@@ -333,7 +361,7 @@ class _ProdukPageState extends State<ProdukPage> {
         ]),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: addNewProduk, 
+        onPressed: () => showModalProduk(type: 'create'), 
         label: const Row(children: [Icon(Icons.add), Text("Tambah Produk Baru")])
       ),
     );
