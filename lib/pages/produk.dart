@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
+import 'package:simplepos/globals.dart';
 
 import '../models/produk.dart';
 
@@ -15,16 +16,157 @@ class ProdukPage extends StatefulWidget {
 
 class _ProdukPageState extends State<ProdukPage> {
   List<Produk> _items = <Produk>[];
+  // search produk by kode or nama controller
   final _cariProdukController = TextEditingController();
+  // default sorting order
   List<String> _sort = ['kode', 'desc'];
+  // default page
   int _page = 1;
+  // default list_pages
+  final List<int> _pageList = [];
 
-  void addNewProduk() {}
+  
+  // form key for form produk
+  final _formKey = GlobalKey<FormState>();
+  final _inputKodeProdukController = TextEditingController();
+  final _inputNamaProdukController = TextEditingController();
+  final _inputHargaProdukController = TextEditingController();
+  final _inputStokProdukController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     getProduk();
+  }
+
+  Future<void> simpanProduk() async {
+    if (_formKey.currentState!.validate()) {
+      final harga = double.parse(_inputHargaProdukController.text.replaceAll(',', ''));
+      dynamic stok;
+      if (_inputStokProdukController.text.isNotEmpty) {
+        stok = int.parse(_inputStokProdukController.text.replaceAll(',', ''));
+      }
+      try {
+        Produk produk = Produk(kode: _inputKodeProdukController.text, nama: _inputNamaProdukController.text, harga: harga, stok: stok);
+        await produk.save();
+        getProduk();
+        _inputKodeProdukController.clear();
+        _inputNamaProdukController.clear();
+        _inputHargaProdukController.clear();
+        _inputStokProdukController.clear();
+      } catch (e) {
+        alertError(context: context, text: "Gagal menyimpan produk : ${e.toString()}");
+      }
+    }
+  }
+
+  void addNewProduk() {
+    showModalBottomSheet(context: context, builder: (BuildContext ctx) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        child: Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Form(
+              key: _formKey, child: Wrap(
+                children: [
+                  Container(
+                    alignment: Alignment.topCenter,
+                    margin: const EdgeInsets.only(bottom: 20), 
+                    child: const Text('Form Produk', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'barlow', fontWeight: FontWeight.w500, fontSize: 24))
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 15), 
+                    child: TextFormField(
+                    decoration: InputDecoration(
+                      border: const OutlineInputBorder(),
+                      labelText: 'Kode',
+                      suffixIcon: GestureDetector(onTap: () => _inputKodeProdukController.clear(), child: const Icon(Icons.clear)),
+                      hintText: 'Kode Produk',
+                    ),
+                    controller: _inputKodeProdukController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Kode tidak boleh kosong';
+                      }
+                      return null;
+                    }
+                  )),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 15), 
+                    child: TextFormField(
+                    decoration: InputDecoration(
+                      border: const OutlineInputBorder(),
+                      labelText: 'Nama Produk',
+                      suffixIcon: GestureDetector(onTap: () => _inputNamaProdukController.clear(), child: const Icon(Icons.clear)),
+                      hintText: 'Nama Produk',
+                    ),
+                    controller: _inputNamaProdukController,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Nama tidak boleh kosong';
+                      }
+                      return null;
+                    }
+                  )),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 15), 
+                    child: TextFormField(
+                    decoration: InputDecoration(
+                      border: const OutlineInputBorder(),
+                      labelText: 'Harga',
+                      suffixIcon: GestureDetector(onTap: () => _inputHargaProdukController.clear(), child: const Icon(Icons.clear)),
+                      hintText: 'Harga Produk',
+                    ),
+                    controller: _inputHargaProdukController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [ThousandsSeparatorInputFormatter()],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Harga tidak boleh kosong';
+                      }
+                      return null;
+                    }
+                  )),
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 15), 
+                    child: TextFormField(
+                    decoration: InputDecoration(
+                      border: const OutlineInputBorder(),
+                      labelText: 'Stok',
+                      suffixIcon: GestureDetector(onTap: () => _inputStokProdukController.clear(), child: const Icon(Icons.clear)),
+                      hintText: 'Stok Produk',
+                    ),
+                    controller: _inputStokProdukController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [ThousandsSeparatorInputFormatter()],
+                  )),
+                  Container(
+                    alignment: Alignment.bottomRight,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await simpanProduk();
+                        Navigator.pop(ctx);
+                        alertSuccess(context: context, text: "Berhasil menyimpan produk");
+                      }, 
+                      style: ButtonStyle(
+                        foregroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorDark),
+                        elevation: MaterialStateProperty.all(1),
+                        backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
+                        padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 20, bottom: 20, left: 25, right: 25))
+                      ),
+                      child: const Text('Simpan'),
+                    ),
+                  )
+                ]
+              )
+            ),
+          ),
+        )
+      );
+    });
   }
 
   void getProduk({bool reset = false}) async {
@@ -33,6 +175,10 @@ class _ProdukPageState extends State<ProdukPage> {
     }
     Map<String, dynamic> produkData = await Produk.get(search: _cariProdukController.text, sort: _sort, page: _page);
     _items = produkData["produkList"];
+    _pageList.clear();
+    for (int i = 1; i <= produkData["totalPage"]; i++) {
+      _pageList.add(i);
+    }
     setState(() {});
   }
 
@@ -55,11 +201,10 @@ class _ProdukPageState extends State<ProdukPage> {
       bgColor = Colors.green[50];
       if (_sort[1] == 'desc') {
         img = 'assets/images/sort_desc.svg';
-        bgColor = Colors.orange[50];
+        bgColor = Colors.blue[50];
       }
       sortView = SvgPicture.asset(img, width: 18, height: 18);
     }
-
 
     Widget innerWidget = Container(
       decoration: BoxDecoration(color: bgColor),
@@ -85,10 +230,11 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
+  var formatter = NumberFormat('#,###');
+
   @override
   Widget build(BuildContext context) {
     List<TableRow> tableBody = [];
-    var formatter = NumberFormat('#,###');
     for (Produk produk in _items) {
       tableBody.add(
         TableRow(
@@ -96,29 +242,17 @@ class _ProdukPageState extends State<ProdukPage> {
             Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode)),
             Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.nama)),
             Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text("Rp ${formatter.format(produk.harga.ceil())}")),
-            produk.stok.toString() == 'null' ? 
-            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text("∞", style: TextStyle(color: Colors.green)))
-            :
-            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(formatter.format(produk.stok).toString()))
-            ,
-            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text('#')),
+            (
+              produk.stok.toString() == 'null' ? 
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text("∞", style: TextStyle(color: Colors.green)))
+              :
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(formatter.format(produk.stok).toString()))
+            ),
+            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text('###')),
           ]
         )
       );
     }
-
-    List<TableRow> rows = [
-      TableRow(
-        children: [
-          tableHeader(data: 'kode', label: 'Kode'),
-          tableHeader(data: 'nama', label: 'Produk'),
-          tableHeader(data: 'harga', label: 'Harga'),
-          tableHeader(data: 'stok', label: 'Stok'),
-          tableHeader(data: '#'),
-        ]
-      ),
-      ...tableBody
-    ];
     
     return Scaffold(
       appBar: AppBar(
@@ -129,35 +263,78 @@ class _ProdukPageState extends State<ProdukPage> {
         decoration: BoxDecoration(color: Colors.grey[200]),
         padding: const EdgeInsets.all(8),
         child: Column(children: [
-          Container(decoration: const BoxDecoration(color: Colors.white), margin: const EdgeInsets.only(bottom: 15, top: 10), child: TextFormField(
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Cari Produk',
-            ),
-            onChanged: (text) {
-              getProduk(reset: true);
-            },
-            controller: _cariProdukController,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Nominal tidak boleh kosong';
-              }
-              return null;
-            },
-            // inputFormatters: [ThousandsSeparatorInputFormatter()],
-          )),
+          Container(
+            decoration: const BoxDecoration(color: Colors.white), 
+            margin: const EdgeInsets.only(bottom: 15, top: 10), 
+            child: TextFormField(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Cari Produk',
+              ),
+              onChanged: (text) {
+                getProduk(reset: true);
+              },
+              controller: _cariProdukController,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Nominal tidak boleh kosong';
+                }
+                return null;
+              },
+            )
+          ),
           Expanded(child: SingleChildScrollView(child: Column(children: [
             Table(
-              border: TableBorder.all(color: Colors.black38),
-              children: rows,
+              border: TableBorder.all(color: Colors.black26),
+              children: <TableRow>[
+                TableRow(
+                  children: [
+                    tableHeader(data: 'kode', label: 'Kode'),
+                    tableHeader(data: 'nama', label: 'Produk'),
+                    tableHeader(data: 'harga', label: 'Harga'),
+                    tableHeader(data: 'stok', label: 'Stok'),
+                    tableHeader(data: '###'),
+                  ]
+                ),
+                ...tableBody
+              ],
             )
           ]))),
+          Container(
+            padding: const EdgeInsets.only(top: 15, bottom: 15), 
+            child: Row(
+            children: [
+              const Text('Page: ', style: TextStyle(fontSize: 18)),
+              _pageList.isNotEmpty ?
+              Container(
+                padding: const EdgeInsets.only(top: 0, bottom: 0, left: 10, right: 0),
+                decoration: const BoxDecoration(
+                  color: Colors.white, 
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                ),
+                child: DropdownButton(
+                  icon: const Icon(Icons.arrow_drop_down),
+                  iconSize: 42,
+                  underline: const SizedBox(),
+                  value: _page,
+                  items: _pageList.map((e) => DropdownMenuItem(value: e, child: Text(e.toString()))).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _page = val!;
+                    });
+                    getProduk();
+                  },
+                )
+              )
+              :
+              const SizedBox.shrink()
+            ],
+          ))
         ]),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: addNewProduk,
-        tooltip: 'Tambah Produk Baru',
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: addNewProduk, 
+        label: const Row(children: [Icon(Icons.add), Text("Tambah Produk Baru")])
       ),
     );
   }
