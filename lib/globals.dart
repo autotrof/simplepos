@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:flutter/services.dart';
 
@@ -11,6 +11,11 @@ void alertSuccess({String text = 'Berhasil Melakukan Operasi', required BuildCon
     type: QuickAlertType.success,
     text: text,
     autoCloseDuration: const Duration(seconds: 2),
+    onConfirmBtnTap: () {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    }
   );
 }
 
@@ -19,8 +24,36 @@ void alertError({String text = 'Terjadi Kesalahan', required BuildContext contex
     context: context,
     type: QuickAlertType.error,
     text: text,
-    autoCloseDuration: const Duration(seconds: 2),
+    onConfirmBtnTap: () {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+    }
   );
+}
+
+Future<bool> alertConfirmation({required String text, required BuildContext context, String confirmBtnText = "Ya, Lanjutkan", String title = "Konfirmasi"}) async {
+  bool confirmed = false;
+  await QuickAlert.show(
+    context: context, 
+    type: QuickAlertType.warning,
+    text: text,
+    confirmBtnText: confirmBtnText,
+    confirmBtnColor: Theme.of(context).primaryColorLight,
+    backgroundColor: Theme.of(context).hintColor,
+    confirmBtnTextStyle: TextStyle(
+      color: Theme.of(context).primaryColor,
+      fontWeight: FontWeight.bold,
+    ),
+    title: title,
+    titleColor: Colors.white,
+    textColor: Colors.white,
+    onConfirmBtnTap: () {
+      confirmed = true;
+      Navigator.pop(context);
+    },
+  );
+  return confirmed;
 }
 
 

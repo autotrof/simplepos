@@ -1,7 +1,4 @@
 // ignore_for_file: non_constant_identifier_names
-
-import 'dart:developer';
-
 import 'package:simplepos/models/model.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -10,7 +7,6 @@ import '../db.dart';
 class Produk extends Model{
   static const tableName = 'produk';
   static const collectionName = 'produk';
-  static const limit = 50;
 
   String kode;
   String nama;
@@ -59,7 +55,18 @@ class Produk extends Model{
     updated_at = now;
     await db.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
     return this;
-  }  
+  }
+
+  @override
+  Future<dynamic> delete() async {
+    Database db = await getDatabase();
+    try {
+      await db.delete(tableName, where: "kode = '$kode'");
+    } catch (exception) {
+      return exception;
+    }
+    return true;
+  }
 
   static Future<int> saveMany(List<Produk> produkList) async {
     Database db = await getDatabase();
@@ -76,7 +83,7 @@ class Produk extends Model{
     return objs.length;
   }
 
-  static Future<Map<String, dynamic>> get({String search = '', List<String> sort = const ['kode', 'ASC'], int page = 1}) async {
+  static Future<Map<String, dynamic>> get({String search = '', List<String> sort = const ['kode', 'ASC'], int page = 1, int limit = 50}) async {
     Database db = await getDatabase();
     String query = 'SELECT $tableName.* FROM $tableName';
     String queryCount = 'SELECT COUNT(*) as total FROM $tableName';
@@ -86,13 +93,16 @@ class Produk extends Model{
       queryCount += whereQuery;
     }
     final result = await db.rawQuery(queryCount);
-    final totalPage = (int.parse(result[0]["total"].toString()) / limit).ceil();
+
+    final totalPage = limit == 0 ? 1 : (int.parse(result[0]["total"].toString()) / limit).ceil();
 
     if (sort.isNotEmpty) {
       query += " ORDER BY ${sort[0]} ${sort[1]}";
     }
-    final int offset = (page - 1) * limit;
-    query += " LIMIT $limit OFFSET $offset";
+    if (limit != 0) {
+      final int offset = (page - 1) * 50;
+      query += " LIMIT $limit OFFSET $offset";
+    }
 
     List<Map<String, dynamic>> maps = await db.rawQuery(query);
     List<Produk> produkList = [];
@@ -101,6 +111,7 @@ class Produk extends Model{
         produkList.add(Produk.fromMap(map));
       }
     }
+
     return {
       "totalData": result[0]["total"],
       "totalPage": totalPage,

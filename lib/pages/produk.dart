@@ -1,3 +1,4 @@
+import 'package:barcode/barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
@@ -6,9 +7,7 @@ import 'package:simplepos/globals.dart';
 import '../models/produk.dart';
 
 class ProdukPage extends StatefulWidget {
-  const ProdukPage({super.key, required this.title});
-
-  final String title;
+  const ProdukPage({super.key});
 
   @override
   State<ProdukPage> createState() => _ProdukPageState();
@@ -37,6 +36,30 @@ class _ProdukPageState extends State<ProdukPage> {
   void initState() {
     super.initState();
     getProduk();
+  }
+
+  Future<void> hapusProduk(Produk produk) async {
+    final bool confirmed = await alertConfirmation(context: context, text: "Anda yakin akan menghapus data produk ${produk.nama} ?");
+    if (confirmed) {
+      dynamic deleteResult = await produk.delete();
+      if (deleteResult == true) {
+        // ignore: use_build_context_synchronously
+        showDialog(
+          context: context, 
+          builder: (_) => AlertDialog(
+            title: Text("Berhasil menghapus produk ${produk.nama}"),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            elevation: 24,
+          )
+        );
+        // ignore: use_build_context_synchronously
+        // alertSuccess(context: context, text: "Berhasil menghapus produk ${produk.nama}");
+        getProduk();
+      } else {
+        // ignore: use_build_context_synchronously
+        alertError(context: context, text: deleteResult.toString());
+      }
+    }
   }
 
   Future<void> simpanProduk() async {
@@ -247,53 +270,97 @@ class _ProdukPageState extends State<ProdukPage> {
   @override
   Widget build(BuildContext context) {
     List<TableRow> tableBody = [];
-    for (Produk produk in _items) {
-      tableBody.add(
-        TableRow(
-          decoration: const BoxDecoration(color: Colors.white),
-          children: [
-            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode)),
-            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.nama)),
-            Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text("Rp ${formatter.format(produk.harga.ceil())}")),
-            (
-              produk.stok.toString() == 'null' ? 
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text("∞", style: TextStyle(color: Colors.green)))
-              :
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(formatter.format(produk.stok).toString()))
-            ),
-            Container(
-              padding: const EdgeInsets.only(top: 3, left: 5),
-              child: Row(
+    if (_items.isNotEmpty) {
+      for (Produk produk in _items) {
+        tableBody.add(
+          TableRow(
+            decoration: const BoxDecoration(color: Colors.white),
+            children: [
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: SvgPicture.string(height: 50, Barcode.code128().toSvg(produk.kode))),
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode)),
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.nama)),
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text("Rp ${formatter.format(produk.harga.ceil())}")),
+              (
+                produk.stok.toString() == 'null' ? 
+                Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text("∞", style: TextStyle(color: Colors.green)))
+                :
+                Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(formatter.format(produk.stok).toString()))
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   TextButton(
                     style: TextButton.styleFrom(
-                      shape: const BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(3))),
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
                       backgroundColor: Theme.of(context).primaryColorLight
                     ),
                     onPressed: () => showModalProduk(type: 'edit', produk: produk), 
                     child: const Text("Edit")
                   ),
-                  const Expanded(child: Row()),
+                  const Padding(padding: EdgeInsets.all(5), child: SizedBox.shrink()),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.red[50]
+                    ),
+                    onPressed: () => hapusProduk(produk), 
+                    child: const Text("Hapus")
+                  )
                 ],
-              )
+              ),
+            ]
+          )
+        );
+      }
+    } else {
+      tableBody.add(
+        TableRow(
+          decoration: const BoxDecoration(color: Colors.white),
+          children: [
+            Container(
+              decoration: const BoxDecoration(color: Colors.white), 
+              padding: const EdgeInsets.all(10), 
+              child: const Text("Data tidak ditemukan")
             ),
+            Container(
+              decoration: const BoxDecoration(color: Colors.white), 
+              padding: const EdgeInsets.all(10), 
+              child: const Text("Data tidak ditemukan")
+            ),
+            Container(
+              decoration: const BoxDecoration(color: Colors.white), 
+              padding: const EdgeInsets.all(10), 
+              child: const Text("Data tidak ditemukan")
+            ),
+            Container(
+              decoration: const BoxDecoration(color: Colors.white), 
+              padding: const EdgeInsets.all(10), 
+              child: const Text("Data tidak ditemukan")
+            ),
+            Container(
+              decoration: const BoxDecoration(color: Colors.white), 
+              padding: const EdgeInsets.all(10), 
+              child: const Text("Data tidak ditemukan")
+            ),
+            Container(
+              decoration: const BoxDecoration(color: Colors.white), 
+              padding: const EdgeInsets.all(10), 
+              child: const Text("Data tidak ditemukan")
+            )
           ]
         )
       );
     }
     
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
       body: Container(
         decoration: BoxDecoration(color: Colors.grey[200]),
         padding: const EdgeInsets.all(8),
         child: Column(children: [
           Container(
             decoration: const BoxDecoration(color: Colors.white), 
-            margin: const EdgeInsets.only(bottom: 15, top: 10), 
+            margin: const EdgeInsets.only(bottom: 15, top: 10),
             child: TextFormField(
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
@@ -303,20 +370,19 @@ class _ProdukPageState extends State<ProdukPage> {
                 getProduk(reset: true);
               },
               controller: _cariProdukController,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Nominal tidak boleh kosong';
-                }
-                return null;
-              },
             )
           ),
           Expanded(child: SingleChildScrollView(child: Column(children: [
             Table(
+              columnWidths: const {
+                5: FixedColumnWidth(170)
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               border: TableBorder.all(color: Colors.black26),
               children: <TableRow>[
                 TableRow(
                   children: [
+                    tableHeader(data: 'kode', label: 'Barcode'),
                     tableHeader(data: 'kode', label: 'Kode'),
                     tableHeader(data: 'nama', label: 'Produk'),
                     tableHeader(data: 'harga', label: 'Harga'),
@@ -332,7 +398,7 @@ class _ProdukPageState extends State<ProdukPage> {
             padding: const EdgeInsets.only(top: 15, bottom: 15), 
             child: Row(
             children: [
-              const Text('Page: ', style: TextStyle(fontSize: 18)),
+              const Text('Halaman: ', style: TextStyle(fontSize: 18)),
               _pageList.isNotEmpty ?
               Container(
                 padding: const EdgeInsets.only(top: 0, bottom: 0, left: 10, right: 0),

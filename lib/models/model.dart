@@ -12,6 +12,10 @@ abstract class Model {
     // TODO: implement save
     throw UnimplementedError();
   }
+  Future<dynamic> delete() async {
+    // TODO: implement save
+    throw UnimplementedError();
+  }
   static Future<int> saveMany(List<Model> modelList) async {
     // TODO: implement saveMany
     throw UnimplementedError();
