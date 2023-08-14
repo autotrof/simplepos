@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 import 'dart:math';
 import 'package:path/path.dart' as p;
+import 'package:simplepos/globals.dart';
 import 'package:simplepos/models/produk.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider/path_provider.dart';
@@ -50,10 +51,10 @@ Future<Database> getDatabase() async {
 
 void initSampleData() async {
   List<Produk> produkList = [];
-  for (int i = 0; i < 230; i++) { 
+  for (int i = 0; i < 100; i++) { 
     bool isStokNull = Random().nextBool();
     produkList.add(Produk(
-      kode: 'P$i', 
+      kode: '${randomString(10).toUpperCase()}$i', 
       nama: 'Produk $i', 
       stok: isStokNull ? Random().nextInt(100) : null,
       harga: Random().nextDouble() * 100000

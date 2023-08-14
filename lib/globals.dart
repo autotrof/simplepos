@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:flutter/services.dart';
@@ -102,4 +104,11 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
     // If the new value and old value are the same, just return as-is
     return newValue;
   }
+}
+
+String randomString(int length) {
+  final random = Random();
+  const availableChars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+  final randomString = List.generate(length, (index) => availableChars[random.nextInt(availableChars.length)]).join();
+  return randomString;
 }
