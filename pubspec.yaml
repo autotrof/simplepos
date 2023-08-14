@@ -45,6 +45,8 @@ dependencies:
   barcode:
   fan_side_drawer:
   bootstrap_grid:
+  top_snackbar_flutter:
+  nanoid: ^1.0.0
 
 dev_dependencies:
   flutter_test:

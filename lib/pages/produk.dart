@@ -1,8 +1,9 @@
 import 'package:barcode/barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:intl/intl.dart';
 import 'package:simplepos/globals.dart';
+import 'package:top_snackbar_flutter/custom_snack_bar.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
 import '../models/produk.dart';
 
@@ -14,27 +15,32 @@ class ProdukPage extends StatefulWidget {
 }
 
 class _ProdukPageState extends State<ProdukPage> {
-  List<Produk> _items = <Produk>[];
-  // search produk by kode or nama controller
-  final _cariProdukController = TextEditingController();
-  // default sorting order
-  List<String> _sort = ['kode', 'desc'];
-  // default page
-  int _page = 1;
-  // default list_pages
-  final List<int> _pageList = [];
+  late List<Produk> _items;
+  late List<String> _sort;
+  late int _page;
+  late List<int> _pageList;
 
-  
-  // form key for form produk
-  final _formKey = GlobalKey<FormState>();
-  final _inputKodeProdukController = TextEditingController();
-  final _inputNamaProdukController = TextEditingController();
-  final _inputHargaProdukController = TextEditingController();
-  final _inputStokProdukController = TextEditingController();
+  late GlobalKey<FormState> _formKey;
+  late TextEditingController _cariProdukController;
+  late TextEditingController _inputKodeProdukController;
+  late TextEditingController _inputNamaProdukController;
+  late TextEditingController _inputHargaProdukController;
+  late TextEditingController _inputStokProdukController;
 
   @override
   void initState() {
     super.initState();
+    _cariProdukController = TextEditingController();
+    _formKey = GlobalKey<FormState>();
+    _inputKodeProdukController = TextEditingController();
+    _inputNamaProdukController = TextEditingController();
+    _inputHargaProdukController = TextEditingController();
+    _inputStokProdukController = TextEditingController();
+
+    _page = 1;
+    _pageList = [];
+    _sort = ['kode', 'desc'];
+    _items = <Produk>[];
     getProduk();
   }
 
@@ -44,16 +50,13 @@ class _ProdukPageState extends State<ProdukPage> {
       dynamic deleteResult = await produk.delete();
       if (deleteResult == true) {
         // ignore: use_build_context_synchronously
-        showDialog(
-          context: context, 
-          builder: (_) => AlertDialog(
-            title: Text("Berhasil menghapus produk ${produk.nama}"),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            elevation: 24,
-          )
+        showTopSnackBar(
+            // ignore: use_build_context_synchronously
+            Overlay.of(context),
+            CustomSnackBar.success(
+              message: "Berhasil menghapus produk ${produk.nama}",
+            ),
         );
-        // ignore: use_build_context_synchronously
-        // alertSuccess(context: context, text: "Berhasil menghapus produk ${produk.nama}");
         getProduk();
       } else {
         // ignore: use_build_context_synchronously
@@ -89,7 +92,7 @@ class _ProdukPageState extends State<ProdukPage> {
     _inputHargaProdukController.text = '';
     _inputStokProdukController.text = '';
     if (type == 'edit') {
-      _inputKodeProdukController.text = produk!.kode;
+      _inputKodeProdukController.text = produk!.kode!;
       _inputNamaProdukController.text = produk.nama;
       _inputHargaProdukController.text = produk.harga.toString();
       if (produk.stok != null) {
@@ -184,7 +187,15 @@ class _ProdukPageState extends State<ProdukPage> {
                     child: ElevatedButton(
                       onPressed: () async {
                         await simpanProduk();
-                        alertSuccess(context: ctx);
+
+                        showTopSnackBar(
+                            // ignore: use_build_context_synchronously
+                            Overlay.of(context),
+                            const CustomSnackBar.success(
+                              message: "Berhasil menyimpan produk",
+                            ),
+                            displayDuration: const Duration(seconds: 2),
+                        );
                       }, 
                       style: ButtonStyle(
                         foregroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorDark),
@@ -265,8 +276,6 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
-  var formatter = NumberFormat('#,###');
-
   @override
   Widget build(BuildContext context) {
     List<TableRow> tableBody = [];
@@ -276,8 +285,8 @@ class _ProdukPageState extends State<ProdukPage> {
           TableRow(
             decoration: const BoxDecoration(color: Colors.white),
             children: [
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: SvgPicture.string(height: 50, Barcode.code128().toSvg(produk.kode))),
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode)),
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: SvgPicture.string(height: 50, Barcode.code128().toSvg(produk.kode!))),
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode!)),
               Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.nama)),
               Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text("Rp ${formatter.format(produk.harga.ceil())}")),
               (
@@ -387,9 +396,18 @@ class _ProdukPageState extends State<ProdukPage> {
                     tableHeader(data: 'nama', label: 'Produk'),
                     tableHeader(data: 'harga', label: 'Harga'),
                     tableHeader(data: 'stok', label: 'Stok'),
-                    tableHeader(data: '###'),
+                    tableHeader(data: '###', label: ''),
                   ]
-                ),
+                )
+              ]
+            ),
+            Table(
+              columnWidths: const {
+                5: FixedColumnWidth(170)
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+              border: TableBorder.all(color: Colors.black26),
+              children: <TableRow>[
                 ...tableBody
               ],
             )

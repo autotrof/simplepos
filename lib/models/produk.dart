@@ -1,4 +1,6 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:flutter/material.dart';
+import 'package:nanoid/async.dart';
 import 'package:simplepos/models/model.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -8,15 +10,21 @@ class Produk extends Model{
   static const tableName = 'produk';
   static const collectionName = 'produk';
 
-  String kode;
+  String? kode;
   String nama;
   double harga;
   int? stok;
   int created_at;
   int updated_at;
 
-  Produk({required this.kode, required this.nama, required this.harga, this.stok, this.created_at = 0, this.updated_at = 0});
-  
+  static Future<String> generateKode () async {
+    return await customAlphabet('1234567890QWERTYUIOPASDFGHJKLZXCVBNM', 10);
+  }
+
+  Produk({String? kode, required this.nama, required this.harga, this.stok, this.created_at = 0, this.updated_at = 0}) {
+    kode ??= '';
+  }
+
   @override
   Map<String, dynamic> toMap() {
     return {
@@ -42,7 +50,9 @@ class Produk extends Model{
       stok = null;
     }
     
-    return Produk(kode: data["kode"], nama: data["nama"], harga: double.parse(data["harga"].toString()), stok: stok, created_at: int.parse(data["created_at"].toString()), updated_at: int.parse(data["updated_at"].toString()));
+    Produk p = Produk(nama: data["nama"], harga: double.parse(data["harga"].toString()), stok: stok, created_at: int.parse(data["created_at"].toString()), updated_at: int.parse(data["updated_at"].toString()));
+    p.kode = data["kode"];
+    return p;
   }
 
   @override
@@ -53,6 +63,7 @@ class Produk extends Model{
       created_at = now;
     }
     updated_at = now;
+    kode ??= await generateKode();
     await db.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
     return this;
   }
@@ -60,8 +71,17 @@ class Produk extends Model{
   @override
   Future<dynamic> delete() async {
     Database db = await getDatabase();
+    final int now = DateTime.now().millisecondsSinceEpoch;
     try {
-      await db.delete(tableName, where: "kode = '$kode'");
+      var randomId = await nanoid(6);
+      await db.update(
+        tableName, {
+          "deleted_at": now,
+          "kode": "$kode$randomId",
+        }, 
+        where: "kode = ?", 
+        whereArgs: [kode]
+      );
     } catch (exception) {
       return exception;
     }
@@ -73,6 +93,7 @@ class Produk extends Model{
     Batch batch = db.batch();
     final int now = DateTime.now().millisecondsSinceEpoch;
     for (Produk produk in produkList) {
+      produk.kode ??= await generateKode();
       if (produk.created_at == 0) {
         produk.created_at = now;
       }
@@ -83,12 +104,19 @@ class Produk extends Model{
     return objs.length;
   }
 
-  static Future<Map<String, dynamic>> get({String search = '', List<String> sort = const ['kode', 'ASC'], int page = 1, int limit = 50}) async {
+  static Future<Map<String, dynamic>> get({String search = '', List<String> sort = const ['kode', 'ASC'], int page = 1, int limit = 50, bool withTrashed = false}) async {
     Database db = await getDatabase();
     String query = 'SELECT $tableName.* FROM $tableName';
     String queryCount = 'SELECT COUNT(*) as total FROM $tableName';
+    if (!withTrashed) {
+      query += ' WHERE deleted_at IS NULL';
+      queryCount += ' WHERE deleted_at IS NULL';
+    } else {
+      query += ' WHERE kode != NULL';
+      queryCount += ' WHERE kode != NULL';
+    }
     if (search.isNotEmpty) {
-      final String whereQuery = " WHERE (LOWER(kode) like '%${search.toLowerCase()}%' OR LOWER(nama) like '%${search.toLowerCase()}%')";
+      final String whereQuery = " AND (LOWER(kode) like '%${search.toLowerCase()}%' OR LOWER(nama) like '%${search.toLowerCase()}%')";
       query += whereQuery;
       queryCount += whereQuery;
     }
@@ -111,6 +139,8 @@ class Produk extends Model{
         produkList.add(Produk.fromMap(map));
       }
     }
+    // debugPrint(produkList.toString());
+    // debugPrint("ABCDEFG");
 
     return {
       "totalData": result[0]["total"],

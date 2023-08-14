@@ -1,11 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:quickalert/quickalert.dart';
 import 'package:flutter/services.dart';
 
 const String appName = 'Simple POS';
 const String debugCode = '46UN664N73NG53K4L1';
+
+final NumberFormat formatter = NumberFormat.currency(locale: 'id', symbol: '', decimalDigits: 0);
 
 void alertSuccess({String text = 'Berhasil Melakukan Operasi', required BuildContext context}) {
   QuickAlert.show(

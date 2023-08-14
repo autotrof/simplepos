@@ -171,6 +171,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.9.1"
+  nanoid:
+    dependency: "direct main"
+    description:
+      name: nanoid
+      sha256: be3f8752d9046c825df2f3914195151eb876f3ad64b9d833dd0b799b77b8759e
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   path:
     dependency: "direct main"
     description:
@@ -376,6 +384,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.5.1"
+  top_snackbar_flutter:
+    dependency: "direct main"
+    description:
+      name: top_snackbar_flutter
+      sha256: "22d14664a13db6ac714934c3382bd8d4daa57fb888a672f922df71981c5a5cb2"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   vector_graphics:
     dependency: transitive
     description:

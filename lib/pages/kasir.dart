@@ -1,7 +1,10 @@
 import 'package:bootstrap_grid/bootstrap_grid.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:simplepos/models/produk.dart';
+import 'package:top_snackbar_flutter/custom_snack_bar.dart';
+import 'package:top_snackbar_flutter/top_snack_bar.dart';
+
+import '../globals.dart';
 
 class KasirPage extends StatefulWidget {
   const KasirPage({super.key});
@@ -11,49 +14,28 @@ class KasirPage extends StatefulWidget {
 }
 
 class _KasirPageState extends State<KasirPage> {
-  static const int topHeightAdjustment = -290;
-  AppBar appBar = AppBar(
+  static const int topHeightAdjustment = -350;
+  static final AppBar appBar = AppBar(
     title: const Text('Test'),
   );
 
-  List<Produk> _items = <Produk>[];
-  final List<Produk> _itemSelected = <Produk>[];
-  // search produk by kode or nama controller
+
+  late List<Produk> _items;
+  late List<Produk> _itemSelected;
   late TextEditingController _cariProdukController;
   late FocusNode _inputCariProdukNode;
-  final Map<String, TextEditingController> _inputJumlahPembelian = {};
-
-  final formatter = NumberFormat.currency(locale: 'id', symbol: '', decimalDigits: 0);
-
-  void getProduk() async {
-    Map<String, dynamic> produkData = await Produk.get(search: _cariProdukController.text, limit: 0, sort: ['nama', 'asc']);
-    _items = produkData["produkList"];
-    setState(() {});
-  }
-
-  String getTotal({bool rounded = false}) {
-    double total = 0;
-    for (Produk produk in _itemSelected) {
-      if (int.tryParse(_inputJumlahPembelian[produk.kode]!.text) != null) {
-        int jumlah = int.parse(_inputJumlahPembelian[produk.kode]!.text);
-        total += jumlah * produk.harga;
-      }
-    }
-    if (rounded) {
-      double potongan = (total % 100);
-      if (potongan > 50) {
-        return formatter.format(total + 100 - potongan);
-      }
-      return formatter.format(total - potongan);
-    }
-    return formatter.format(total);
-  }
+  late Map<String, TextEditingController> _inputJumlahPembelian;
+  late ScrollController _scrollPembelianItemController;
 
   @override
   void initState() {
     super.initState();
     _cariProdukController = TextEditingController();
+    _scrollPembelianItemController = ScrollController();
     _inputCariProdukNode = FocusNode();
+    _items = <Produk>[];
+    _itemSelected = <Produk>[];
+    _inputJumlahPembelian = {};
     getProduk();
   }
 
@@ -65,30 +47,6 @@ class _KasirPageState extends State<KasirPage> {
     );
 
     return innerWidget;
-  }
-
-  void addProduk(Produk produk) {
-    if (_inputJumlahPembelian[produk.kode] == null) {
-      _inputJumlahPembelian[produk.kode] = TextEditingController();
-    }
-
-    Produk? produkSelected;
-    for (int i = 0; i < _itemSelected.length; i++) {
-      if (_itemSelected[i].kode == produk.kode) {
-        produkSelected = _itemSelected.firstWhere((element) => element.kode == produk.kode);
-        break;
-      }
-    }
-
-    if (produkSelected == null) {
-      _itemSelected.add(produk);
-      _inputJumlahPembelian[produk.kode]!.text = "1";
-    } else {
-      int jumlah = int.parse(_inputJumlahPembelian[produk.kode]!.text);
-      jumlah++;
-      _inputJumlahPembelian[produk.kode]!.text = jumlah.toString();
-    }
-    setState(() {});
   }
 
   @override
@@ -129,7 +87,7 @@ class _KasirPageState extends State<KasirPage> {
                         } else if (produkInput == null) {
                           return ;
                         }
-                        addProduk(produkInput);
+                        tambahItemPesanan(produkInput);
                         _cariProdukController.clear();
                         getProduk();
                         _inputCariProdukNode.requestFocus();
@@ -162,7 +120,6 @@ class _KasirPageState extends State<KasirPage> {
                     SizedBox(
                       height: MediaQuery.of(context).size.height - appBar.preferredSize.height + topHeightAdjustment,
                       child: SingleChildScrollView(
-                        primary: true,
                         physics: const ClampingScrollPhysics(),
                         child: _items.isNotEmpty ? Table(
                           columnWidths: const {
@@ -172,10 +129,11 @@ class _KasirPageState extends State<KasirPage> {
                           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                           border: TableBorder.all(color: Colors.black26),
                           children: <TableRow>[
-                            ..._items.map((produk) => TableRow(
+                            ..._items.map((produk) {
+                              return TableRow(
                               decoration: const BoxDecoration(color: Colors.white),
                               children: [
-                                Container(padding: const EdgeInsets.all(10), child: SelectableText(produk.kode)),
+                                Container(padding: const EdgeInsets.all(10), child: SelectableText(produk.kode!)),
                                 Container(padding: const EdgeInsets.all(10), child: SelectableText(produk.nama)),
                                 Container(padding: const EdgeInsets.all(10), child: SelectableText("Rp ${formatter.format(produk.harga.ceil())}")),
                                 Container(
@@ -186,9 +144,10 @@ class _KasirPageState extends State<KasirPage> {
                                     :
                                     SelectableText(formatter.format(produk.stok).toString())
                                 ),
-                                Container(alignment: Alignment.centerRight, padding: const EdgeInsets.all(10), child: IconButton(color: Theme.of(context).primaryColor, icon: const Icon(Icons.shopping_cart_checkout_outlined), onPressed: (){ addProduk(produk); }))
+                                Container(alignment: Alignment.centerRight, padding: const EdgeInsets.all(10), child: IconButton(color: Theme.of(context).primaryColor, icon: const Icon(Icons.shopping_cart_checkout_outlined), onPressed: (){ tambahItemPesanan(produk); }))
                               ]
-                            ))
+                            );
+                            })
                             .toList()
                           ],
                         ) : Table(
@@ -244,7 +203,7 @@ class _KasirPageState extends State<KasirPage> {
                       children: [
                         TableRow(
                           children: [
-                            tableHeader(data: 'kode', label: 'Produk'),
+                            tableHeader(data: 'nama', label: 'Produk'),
                             tableHeader(data: 'nama', label: 'Jumlah'),
                             tableHeader(data: 'harga', label: 'Harga'),
                             tableHeader(data: 'harga', label: 'Subtotal'),
@@ -256,6 +215,7 @@ class _KasirPageState extends State<KasirPage> {
                     SizedBox(
                       height: MediaQuery.of(context).size.height - appBar.preferredSize.height - 25 + topHeightAdjustment,
                       child: SingleChildScrollView(
+                        controller: _scrollPembelianItemController,
                         physics: const ClampingScrollPhysics(),
                         child: Table(
                           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
@@ -273,7 +233,7 @@ class _KasirPageState extends State<KasirPage> {
                                     child: TextFormField(
                                       decoration: InputDecoration(
                                         prefixIcon: IconButton(
-                                          icon: Icon(Icons.remove, color: Colors.red[400]),
+                                          icon: const Icon(Icons.remove, color: Colors.red,  size: 18),
                                           onPressed: () {
                                             String jumlah = _inputJumlahPembelian[entry.value.kode]!.text;
                                             if (int.tryParse(_inputJumlahPembelian[entry.value.kode]!.text) != null && jumlah != "1") {
@@ -284,9 +244,9 @@ class _KasirPageState extends State<KasirPage> {
                                           },
                                         ),
                                         suffixIcon: IconButton(
-                                          icon: const Icon(Icons.add),
+                                          icon: const Icon(Icons.add, color: Colors.green, size: 18),
                                           onPressed: () {
-                                            addProduk(entry.value);
+                                            tambahItemPesanan(entry.value);
                                           },
                                         )
                                       ),
@@ -314,14 +274,13 @@ class _KasirPageState extends State<KasirPage> {
                                       ),
                                       tooltip: "Hapus item",
                                       icon: const Icon(
-                                        Icons.delete_forever_rounded, 
+                                        Icons.highlight_remove, 
                                         color: Colors.redAccent, 
                                         weight: 1
                                       ),
-                                      onPressed: (){
+                                      onPressed: () {
                                         final index = entry.key;
-                                        _itemSelected.removeAt(index);
-                                        setState(() {});
+                                        hapusItemPesanan(index);
                                       }
                                     )
                                   )
@@ -351,51 +310,55 @@ class _KasirPageState extends State<KasirPage> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(bottom: 7), 
-                      child: TextButton(
+                      child: ElevatedButton.icon (
                         style: ButtonStyle(
                           shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
                           backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
                           alignment: Alignment.centerLeft
                         ),
                         onPressed: () {}, 
-                        child: const Text("Cetak")
+                        icon: const Icon(Icons.print),
+                        label: const Text("Cetak"),
                       )
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 7), 
-                      child: TextButton(
+                      child: ElevatedButton.icon (
                         style: ButtonStyle(
                           shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
                           backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
                           alignment: Alignment.centerLeft
                         ),
-                        onPressed: () {}, 
-                        child: const Text("Bayar")
+                        onPressed: () async {
+                          await payPesanan();
+                        }, 
+                        icon: const Icon(Icons.payments_outlined),
+                        label: const Text("Bayar")
                       )
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 0), 
-                      child: TextButton(
+                      child: ElevatedButton.icon (
                         style: ButtonStyle(
-                          textStyle: MaterialStatePropertyAll(TextStyle(color: Colors.red[400])),
                           shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                          backgroundColor: MaterialStatePropertyAll(Colors.red[200]),
+                          backgroundColor: MaterialStatePropertyAll(Colors.red[100]),
                           alignment: Alignment.centerLeft
                         ),
                         onPressed: () {}, 
-                        child: const Text("Tahan")
+                        icon: const Icon(Icons.pause, color: Colors.red),
+                        label: const Text("Tahan", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
                       )
                     ),
                   ]
                 ),
               ),
               Expanded(child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.only(bottom: 8, left: 16),
                 decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(4)),
                 child: Row(
                   children: [
-                    SelectableText("Rp ${getTotal()}", style: const TextStyle(color: Colors.black87, fontSize: 40, fontWeight: FontWeight.bold)),
-                    SelectableText("  ${double.parse(getTotal(rounded: true)) > 0 ? getTotal(rounded: true) : ''}", style: const TextStyle(color: Colors.black12, fontSize: 40, fontWeight: FontWeight.bold)),
+                    SelectableText("Rp ${getTotal(rounded: true)}", style: const TextStyle(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold)),
+                    SelectableText("  ${getTotal() !='0' ? getTotal() : ''}", style: const TextStyle(color: Colors.black12, fontSize: 40, fontWeight: FontWeight.bold))
                   ]
                 ),
               ))
@@ -403,6 +366,70 @@ class _KasirPageState extends State<KasirPage> {
           ),
         )
       ])
+    );
+  }
+  
+  Future<void> getProduk() async {
+    Map<String, dynamic> produkData = await Produk.get(search: _cariProdukController.text, limit: 0, sort: ['nama', 'asc']);
+    _items = produkData["produkList"];
+    setState(() {});
+  }
+
+  String getTotal({bool rounded = false}) {
+    double total = 0;
+    for (Produk produk in _itemSelected) {
+      if (int.tryParse(_inputJumlahPembelian[produk.kode]!.text) != null) {
+        int jumlah = int.parse(_inputJumlahPembelian[produk.kode]!.text);
+        total += jumlah * produk.harga;
+      }
+    }
+    if (rounded) {
+      double potongan = (total % 100);
+      if (potongan > 50) {
+        return formatter.format(total + 100 - potongan);
+      }
+      return formatter.format(total - potongan);
+    }
+    return formatter.format(total);
+  }
+
+  void tambahItemPesanan (Produk produk) {
+    if (_inputJumlahPembelian[produk.kode] == null) {
+      _inputJumlahPembelian[produk.kode!] = TextEditingController();
+    }
+
+    Produk? produkSelected;
+    for (int i = 0; i < _itemSelected.length; i++) {
+      if (_itemSelected[i].kode == produk.kode) {
+        produkSelected = _itemSelected.firstWhere((element) => element.kode == produk.kode);
+        break;
+      }
+    }
+
+    if (produkSelected == null) {
+      _itemSelected.add(produk);
+      _inputJumlahPembelian[produk.kode]!.text = "1";
+      // _scrollPembelianItemController.jumpTo(1000000);
+      _scrollPembelianItemController.animateTo(_scrollPembelianItemController.position.maxScrollExtent + 1000, duration: const Duration(milliseconds: 50), curve: Curves.easeInOut);
+    } else {
+      int jumlah = int.parse(_inputJumlahPembelian[produk.kode]!.text);
+      jumlah++;
+      _inputJumlahPembelian[produk.kode]!.text = jumlah.toString();
+    }
+    setState(() {});
+  }
+
+  void hapusItemPesanan (int index) {
+    _itemSelected.removeAt(index);
+    setState(() {});
+  }
+
+  Future<void> payPesanan() async {
+    showTopSnackBar(
+        Overlay.of(context),
+        const CustomSnackBar.success(
+          message: "Berhasil menyimpan pesanan",
+        ),
     );
   }
 }
