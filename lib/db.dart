@@ -39,8 +39,11 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
       total REAL NOT NULL DEFAULT 0,
       pajak REAL NOT NULL,
       total_akhir REAL NOT NULL GENERATED ALWAYS AS (total - pajak) STORED,
+      is_draft TINYINT(1) NOT NULL DEFAULT 1,
+      is_paused TINYINT(1) NOT NULL DEFAULT 0,
       created_at INT DEFAULT 0,
-      updated_at INT DEFAULT 0
+      updated_at INT DEFAULT 0,
+      deleted_at INT DEFAULT 0
     )
   ''';
   await db.execute(sql2);
@@ -49,16 +52,15 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
     CREATE TABLE IF NOT EXISTS pesanan_item (
       kode_produk VARCHAR(16),
       kode_pesanan VARCHAR(16),
+      urutan INT NOT NULL DEFAULT 1,
       harga REAL NOT NULL,
       jumlah INT NOT NULL,
       subtotal REAL NOT NULL GENERATED ALWAYS AS (harga * jumlah) STORED,
-      pajak REAL NOT NULL,
-      harga_akhir REAL NOT NULL GENERATED ALWAYS AS (subtotal - pajak) STORED,
       created_at INT DEFAULT 0,
       updated_at INT DEFAULT 0,
 
-      FOREIGN KEY(kode_produk) REFERENCES produk(kode) ON UPDATE CASCADE,
-      FOREIGN KEY(kode_pesanan) REFERENCES pesanan(kode) ON UPDATE CASCADE,
+      FOREIGN KEY(kode_produk) REFERENCES produk(kode) ON UPDATE CASCADE ON DELETE CASCADE,
+      FOREIGN KEY(kode_pesanan) REFERENCES pesanan(kode) ON UPDATE CASCADE ON DELETE CASCADE,
       PRIMARY KEY (kode_produk, kode_pesanan)
     )
   ''';
@@ -87,7 +89,7 @@ void initSampleData() async {
     produkList.add(Produk(
       nama: 'Produk $i',
       stok: isStokNull ? Random().nextInt(100) : null,
-      harga: Random().nextDouble() * 100000
+      harga: (Random().nextDouble() * 100000).toInt().toDouble()
     ));
   }
   await Produk.saveMany(produkList);

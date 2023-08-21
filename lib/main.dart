@@ -1,11 +1,25 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 import 'package:simplepos/db.dart';
 import 'package:simplepos/pages/kasir.dart';
 import 'package:simplepos/pages/produk.dart';
 
 void main() async {
+  if (Platform.isAndroid || Platform.isIOS) {
+    bool jailbroken = await FlutterJailbreakDetection.developerMode;
+    if (jailbroken) {
+      exit(0);
+    }
+  }
+  if (Platform.isAndroid) {
+    bool developerMode = await FlutterJailbreakDetection.developerMode;
+    if (developerMode) {
+      exit(0);
+    }
+  }
   WidgetsFlutterBinding.ensureInitialized();
-  await initDb(refresh: true, withSampleData: true);
+  await initDb(refresh: false, withSampleData: true);
   runApp(const MyApp());
 }
 

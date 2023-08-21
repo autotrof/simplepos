@@ -1,5 +1,4 @@
 // ignore_for_file: non_constant_identifier_names
-import 'package:flutter/material.dart';
 import 'package:nanoid/async.dart';
 import 'package:simplepos/models/model.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -8,22 +7,22 @@ import '../db.dart';
 
 class Produk extends Model{
   static const tableName = 'produk';
-  static const collectionName = 'produk';
 
-  String? kode;
+  late String kode;
   String nama;
   double harga;
   int? stok;
   int created_at;
   int updated_at;
+  int? deleted_at;
 
   static Future<String> generateKode () async {
-    return await customAlphabet('1234567890QWERTYUIOPASDFGHJKLZXCVBNM', 10);
+    String prefix = DateTime.now().millisecondsSinceEpoch.toString();
+    String randomKey = await customAlphabet('QWERTYUIOPASDFGHJKLZXCVBNM1234567890', 3);
+    return prefix + randomKey;
   }
 
-  Produk({String? kode, required this.nama, required this.harga, this.stok, this.created_at = 0, this.updated_at = 0}) {
-    kode ??= '';
-  }
+  Produk({this.kode = '', required this.nama, required this.harga, this.stok, this.created_at = 0, this.updated_at = 0, this.deleted_at});
 
   @override
   Map<String, dynamic> toMap() {
@@ -39,7 +38,7 @@ class Produk extends Model{
 
   @override
   String toString() {
-    return 'Produk{kode: $kode, nama: $nama, harga: $harga, stok: $stok, created_at: $created_at, updated_at: $updated_at}';
+    return 'Produk{kode: $kode, nama: $nama, harga: $harga, stok: $stok, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
   }
 
   static Produk fromMap(Map<String, dynamic> data) {
@@ -50,8 +49,15 @@ class Produk extends Model{
       stok = null;
     }
     
-    Produk p = Produk(nama: data["nama"], harga: double.parse(data["harga"].toString()), stok: stok, created_at: int.parse(data["created_at"].toString()), updated_at: int.parse(data["updated_at"].toString()));
+    Produk p = Produk(
+      nama: data["nama"],
+      harga: double.parse(data["harga"].toString()),
+      stok: stok,
+      created_at: int.parse(data["created_at"].toString()),
+      updated_at: int.parse(data["updated_at"].toString()),
+    );
     p.kode = data["kode"];
+    p.deleted_at = data["deleted_at"];
     return p;
   }
 
@@ -63,7 +69,9 @@ class Produk extends Model{
       created_at = now;
     }
     updated_at = now;
-    kode ??= await generateKode();
+    if (kode == '') {
+      kode = await generateKode();
+    }
     await db.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
     return this;
   }
@@ -73,11 +81,12 @@ class Produk extends Model{
     Database db = await getDatabase();
     final int now = DateTime.now().millisecondsSinceEpoch;
     try {
-      var randomId = await nanoid(6);
-      await db.update(
+      final String randomId = await customAlphabet('1234567890QWERTYUIOPASDFGHJKLXCVBNMZ', 16);
+      final String newKode = "$kode$randomId".substring(0, 16);
+      await db.update (
         tableName, {
           "deleted_at": now,
-          "kode": "$kode$randomId",
+          "kode": newKode,
         }, 
         where: "kode = ?", 
         whereArgs: [kode]
@@ -88,17 +97,20 @@ class Produk extends Model{
     return true;
   }
 
-  static Future<int> saveMany(List<Produk> produkList) async {
+  static Future<int> saveMany(List<Produk> dataList) async {
     Database db = await getDatabase();
     Batch batch = db.batch();
     final int now = DateTime.now().millisecondsSinceEpoch;
-    for (Produk produk in produkList) {
-      produk.kode ??= await generateKode();
-      if (produk.created_at == 0) {
-        produk.created_at = now;
+    for (Produk data in dataList) {
+      if(data.kode == '') {
+        data.kode = await generateKode();
       }
-      produk.updated_at = now;
-      batch.insert(tableName, produk.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      
+      if (data.created_at == 0) {
+        data.created_at = now;
+      }
+      data.updated_at = now;
+      batch.insert(tableName, data.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
     }
     List<Object?> objs = await batch.commit();
     return objs.length;
@@ -139,8 +151,6 @@ class Produk extends Model{
         produkList.add(Produk.fromMap(map));
       }
     }
-    // debugPrint(produkList.toString());
-    // debugPrint("ABCDEFG");
 
     return {
       "totalData": result[0]["total"],

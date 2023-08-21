@@ -61,6 +61,15 @@ Future<bool> alertConfirmation({required String text, required BuildContext cont
   return confirmed;
 }
 
+Widget tableHeader ({required String data, String label = '', bool sortable = true, double padding = 10}) {
+  Widget innerWidget = Container(
+    decoration: const BoxDecoration(color: Colors.lightBlue),
+    padding: EdgeInsets.all(padding), 
+    child: SelectableText(label.isEmpty ? data : label, style: const TextStyle(fontWeight: FontWeight.bold))
+  );
+
+  return innerWidget;
+}
 
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   static const separator = ','; // Change this to '.' for other locales

@@ -92,7 +92,7 @@ class _ProdukPageState extends State<ProdukPage> {
     _inputHargaProdukController.text = '';
     _inputStokProdukController.text = '';
     if (type == 'edit') {
-      _inputKodeProdukController.text = produk!.kode!;
+      _inputKodeProdukController.text = produk!.kode;
       _inputNamaProdukController.text = produk.nama;
       _inputHargaProdukController.text = produk.harga.toString();
       if (produk.stok != null) {
@@ -285,8 +285,8 @@ class _ProdukPageState extends State<ProdukPage> {
           TableRow(
             decoration: const BoxDecoration(color: Colors.white),
             children: [
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: SvgPicture.string(height: 50, Barcode.code128().toSvg(produk.kode!))),
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode!)),
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: SvgPicture.string(height: 50, Barcode.code128().toSvg(produk.kode))),
+              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode)),
               Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.nama)),
               Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text("Rp ${formatter.format(produk.harga.ceil())}")),
               (
