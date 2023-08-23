@@ -501,6 +501,11 @@ class _KasirPageState extends State<KasirPage> {
     await item.delete();
     await _currentPesanan.save();
     _itemSelected.removeWhere((element) => element.kode == item.kode_produk);
+    if (_itemSelected.isEmpty) {
+      await _currentPesanan.delete(force: true);
+      _currentPesanan = Pesanan();
+      _currentPesanan.items = [];
+    }
     setState(() {});
   }
 
@@ -565,10 +570,14 @@ class _ResumePembelianPopupState extends State<ResumePembelianPopup> {
       actions: [
         TextButton(
           onPressed: () async {
-            await pesanan.delete();
+            await pesanan.delete(force: true);
             listPesananDitahan.removeWhere((element) => element.kode == pesanan.kode);
             // ignore: use_build_context_synchronously
             Navigator.pop(context);
+            if (listPesananDitahan.isEmpty) {
+              // ignore: use_build_context_synchronously
+              Navigator.pop(context);
+            }
             setState((){});
           }, 
           child: const Text("Ya Hapus", style: TextStyle(color: Colors.red))
@@ -607,7 +616,28 @@ class _ResumePembelianPopupState extends State<ResumePembelianPopup> {
       height: screenHeight,
       child: Column(
         children: [
-          const Padding(padding: EdgeInsets.only(top:10, bottom: 20), child: Text("Daftar Pembelian Ditahan", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600))),
+          Padding(padding: const EdgeInsets.only(top:10, bottom: 20), child: 
+            Table(
+              children: [
+                TableRow(
+                  children: [
+                    const SizedBox.shrink(),
+                    const Text("Daftar Pembelian Ditahan", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600)),
+                    Row(children: [
+                      const Expanded(child: SizedBox.shrink()),
+                      IconButton(
+                        tooltip: "Close",
+                        onPressed: () {
+                          Navigator.pop(context);
+                        }, 
+                        icon: const Icon(Icons.close)
+                      )
+                    ])
+                  ]
+                )
+              ]
+            )
+          ),
           Expanded(
             child: listPesananDitahan.isNotEmpty ? 
             ListView(
@@ -633,19 +663,19 @@ class _ResumePembelianPopupState extends State<ResumePembelianPopup> {
                                 TableRow(
                                   children: [
                                     const Text("Kode"),
-                                    Text(": ${e.kode}")
+                                    SelectableText(": ${e.kode}")
                                   ]
                                 ),
                                 TableRow(
                                   children: [
                                     const Text("Waktu"),
-                                    Text(": ${DateTime.fromMillisecondsSinceEpoch(e.created_at).toString()}")
+                                    SelectableText(": ${DateTime.fromMillisecondsSinceEpoch(e.created_at).toString()}")
                                   ]
                                 ),
                                 TableRow(
                                     children: [
                                       const Text("Total"),
-                                      Text(": ${e.total.toString()}")
+                                      SelectableText(": ${e.total.toString()}")
                                     ]
                                 )
                               ]

@@ -46,7 +46,6 @@ dependencies:
   bootstrap_grid:
   top_snackbar_flutter:
   nanoid: ^1.0.0
-  accordion:
   flutter_jailbreak_detection:
 
 dev_dependencies:

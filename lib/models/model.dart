@@ -1,5 +1,7 @@
 abstract class Model {
   Map<String, dynamic> toMap();
+  @override
+  String toString();
   static Model fromMap(Map<String, dynamic> data) {
     // TODO: implement fromMap
     throw UnimplementedError();

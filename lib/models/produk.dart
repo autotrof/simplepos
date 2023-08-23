@@ -1,4 +1,5 @@
 // ignore_for_file: non_constant_identifier_names
+import 'package:flutter/foundation.dart';
 import 'package:nanoid/async.dart';
 import 'package:simplepos/models/model.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -73,6 +74,7 @@ class Produk extends Model{
       kode = await generateKode();
     }
     await db.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    debugPrint("SAVED");
     return this;
   }
 
@@ -94,6 +96,7 @@ class Produk extends Model{
     } catch (exception) {
       return exception;
     }
+    debugPrint("DELETED");
     return true;
   }
 
@@ -152,6 +155,7 @@ class Produk extends Model{
       }
     }
 
+    debugPrint("GET");
     return {
       "totalData": result[0]["total"],
       "totalPage": totalPage,

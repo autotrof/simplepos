@@ -112,17 +112,24 @@ class Pesanan extends Model{
   }
 
   @override
-  Future<dynamic> delete() async {
+  Future<dynamic> delete({bool force = false}) async {
     Database db = await getDatabase();
     final int now = DateTime.now().millisecondsSinceEpoch;
     try {
-      await db.update(
-        tableName, {
-          "deleted_at": now
-        }, 
-        where: "kode = ?", 
-        whereArgs: [kode]
-      );
+      if (force) {
+        await db.transaction((txn) async {
+          await txn.delete(PesananItem.tableName, where: 'kode_pesanan = ?', whereArgs: [kode]);
+          await txn.delete(tableName, where: "kode = ?", whereArgs: [kode]);
+        });
+      } else {
+        await db.update(
+          tableName, {
+            "deleted_at": now
+          }, 
+          where: "kode = ?", 
+          whereArgs: [kode]
+        );
+      }
     } catch (exception) {
       return exception;
     }
