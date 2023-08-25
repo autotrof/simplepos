@@ -200,7 +200,23 @@ class _KasirPageState extends State<KasirPage> {
                   children: [
                     Row(
                       children: [
-                        const Expanded(child: Text("Pembelian", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold))),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 10), 
+                          child: ElevatedButton.icon (
+                            style: ButtonStyle(
+                              shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                              backgroundColor: _currentPesanan.items!.isNotEmpty ? MaterialStatePropertyAll(Colors.red[100]) : const MaterialStatePropertyAll(Colors.grey),
+                              alignment: Alignment.centerLeft
+                            ),
+                            onPressed: () {
+                              if (_currentPesanan.items!.isNotEmpty) {
+                                batal();
+                              }
+                            },
+                            icon: Icon(Icons.cancel, color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54),
+                            label: Text("Batal", style: TextStyle(color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54, fontWeight: FontWeight.bold))
+                          )
+                        ),
                         Padding(
                           padding: const EdgeInsets.only(right: 10), 
                           child: ElevatedButton.icon (
@@ -226,7 +242,7 @@ class _KasirPageState extends State<KasirPage> {
                             alignment: Alignment.centerLeft
                           ),
                           icon: Icon(Icons.rotate_left_outlined, color: Colors.green[600]), 
-                          label: Text("Resume pembelian", style: TextStyle(color: Colors.green[600]))
+                          label: Text("Resume", style: TextStyle(color: Colors.green[600]))
                         )
                       ]
                     ),
@@ -400,6 +416,15 @@ class _KasirPageState extends State<KasirPage> {
         )
       ])
     );
+  }
+
+  Future<void> batal() async {
+    await _currentPesanan.delete(force: true);
+    _currentPesanan = Pesanan();
+    _currentPesanan.items = [];
+    _itemSelected = [];
+    _keteranganTahanPesananController.text = '';
+    setState(() {});
   }
   
   Future<void> getProduk() async {
