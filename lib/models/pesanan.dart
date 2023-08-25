@@ -1,5 +1,4 @@
 // ignore_for_file: non_constant_identifier_names
-import 'package:flutter/material.dart';
 import 'package:nanoid/async.dart';
 import 'package:simplepos/models/model.dart';
 import 'package:simplepos/models/pesanan_item.dart';
@@ -17,6 +16,7 @@ class Pesanan extends Model{
   double? total_akhir;//generated
   int? is_draft;
   int? is_paused;
+  String? keterangan_paused;
   int created_at;
   int updated_at;
   int? deleted_at;
@@ -28,7 +28,7 @@ class Pesanan extends Model{
     return prefix + randomKey;
   }
 
-  Pesanan({this.kode = '', this.total = 0, this.pajak = 0, this.is_draft = 1, this.is_paused = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at, this.total_akhir, this.items});
+  Pesanan({this.kode = '', this.total = 0, this.pajak = 0, this.is_draft = 1, this.is_paused = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at, this.total_akhir, this.items, this.keterangan_paused});
 
   @override
   Map<String, dynamic> toMap() {
@@ -39,6 +39,7 @@ class Pesanan extends Model{
       'total_akhir': total_akhir,
       'is_draft': is_draft,
       'is_paused': is_paused,
+      'keterangan_paused': keterangan_paused,
       'created_at': created_at,
       'updated_at': updated_at,
       'deleted_at': deleted_at,
@@ -47,7 +48,7 @@ class Pesanan extends Model{
 
   @override
   String toString() {
-    return 'Pesanan{kode: $kode, total: $total, pajak: $pajak, total_akhir: $total_akhir, is_draft: $is_draft, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
+    return 'Pesanan{kode: $kode, total: $total, pajak: $pajak, total_akhir: $total_akhir, is_draft: $is_draft, is_paused: $is_paused, keterangan_paused: $keterangan_paused, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
   }
 
   static Pesanan fromMap(Map<String, dynamic> data) {
@@ -57,7 +58,8 @@ class Pesanan extends Model{
       total_akhir: data["total_akhir"], 
       pajak: data["pajak"], 
       is_draft: data["is_draft"], 
-      is_paused: data["is_paused"], 
+      is_paused: data["is_paused"],
+      keterangan_paused: data["keterangan_paused"], 
       created_at: data["created_at"], 
       updated_at: data["updated_at"], 
       deleted_at: data["deleted_at"]
@@ -105,10 +107,11 @@ class Pesanan extends Model{
     double total = double.parse(res[0]['total'].toString());
     double pajak = double.parse(res[0]['pajak'].toString());
     double total_akhir = double.parse(res[0]['total_akhir'].toString());
+    String keterangan_paused = res[0]['keterangan_paused'].toString();
     int created_at = int.parse(res[0]['created_at'].toString());
     int updated_at = int.parse(res[0]['updated_at'].toString());
     int? deleted_at = int.tryParse(res[0]['deleted_at'].toString());
-    return Pesanan(kode: kode, total: total, pajak: pajak, total_akhir: total_akhir, created_at: created_at, updated_at: updated_at, deleted_at: deleted_at);
+    return Pesanan(kode: kode, total: total, pajak: pajak, total_akhir: total_akhir, keterangan_paused: keterangan_paused, created_at: created_at, updated_at: updated_at, deleted_at: deleted_at);
   }
 
   @override
@@ -141,7 +144,9 @@ class Pesanan extends Model{
     Batch batch = db.batch();
     final int now = DateTime.now().millisecondsSinceEpoch;
     for (Pesanan data in dataList) {
-      data.kode ??= await generateKode();
+      if (data.kode == '') {
+        data.kode = await generateKode();
+      }
       if (data.created_at == 0) {
         data.created_at = now;
       }

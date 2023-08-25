@@ -25,6 +25,7 @@ class _KasirPageState extends State<KasirPage> {
   late List<Produk> _items;
   late List<Produk> _itemSelected;
   late TextEditingController _cariProdukController;
+  late TextEditingController _keteranganTahanPesananController;
   late FocusNode _inputCariProdukNode;
   late Map<String, TextEditingController> _inputJumlahPembelian;
   late ScrollController _scrollPembelianItemController;
@@ -35,6 +36,7 @@ class _KasirPageState extends State<KasirPage> {
     _currentPesanan = Pesanan();
     _currentPesanan.items = [];
     _cariProdukController = TextEditingController();
+    _keteranganTahanPesananController = TextEditingController();
     _scrollPembelianItemController = ScrollController();
     _inputCariProdukNode = FocusNode();
     _items = <Produk>[];
@@ -64,7 +66,7 @@ class _KasirPageState extends State<KasirPage> {
                 Container(
                   margin: const EdgeInsets.only(bottom: 15, top: 10),
                   child: TextFormField(
-                    autocorrect: true,
+                    autocorrect: false,
                     focusNode: _inputCariProdukNode,
                     decoration: const InputDecoration(
                       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(9)), borderSide: BorderSide(color: Colors.black38)),
@@ -209,7 +211,7 @@ class _KasirPageState extends State<KasirPage> {
                             ),
                             onPressed: () {
                               if (_currentPesanan.items!.isNotEmpty) {
-                                tahanPesanan();
+                                showFormTahanPesanan();
                               }
                             },
                             icon: Icon(Icons.pause, color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54),
@@ -414,6 +416,7 @@ class _KasirPageState extends State<KasirPage> {
 
     await pesananDraft.getItem();
     _currentPesanan = pesananDraft;
+    _keteranganTahanPesananController.text = _currentPesanan.keterangan_paused ?? '';
 
     for (PesananItem item in _currentPesanan.items!) {
       Produk produk = item.produk!;
@@ -523,11 +526,59 @@ class _KasirPageState extends State<KasirPage> {
 
   Future<void> tahanPesanan() async {
     _currentPesanan.is_paused = 1;
+    _currentPesanan.keterangan_paused = _keteranganTahanPesananController.text;
     await _currentPesanan.save();
     _currentPesanan = Pesanan();
     _currentPesanan.items = [];
     _itemSelected = [];
+    _keteranganTahanPesananController.text = '';
     setState(() {});
+  }
+
+  showFormTahanPesanan() {
+    double modalWidth = MediaQuery.of(context).size.width - 100;
+
+    if (modalWidth > 800) {
+      modalWidth = 800;
+    } else {
+      modalWidth -= 100;
+    }
+
+    AlertDialog alert = AlertDialog(
+      title: const Text("Keterangan Pembelian"),
+      content: Container(
+        padding: const EdgeInsets.all(10),
+        width: modalWidth,
+        child: TextFormField(
+          autofocus: true,
+          autocorrect: false,
+          controller: _keteranganTahanPesananController
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text("Batal", style: TextStyle(color: Colors.red))
+        ),
+        const Padding(padding: EdgeInsets.all(10)),
+        TextButton(
+          onPressed: () {
+            tahanPesanan();
+            Navigator.pop(context);
+          }, 
+          child: Text("Simpan", style: TextStyle(color: Theme.of(context).primaryColorDark))
+        )
+      ],
+    );
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
   }
 
   void resumePesanan() {
@@ -656,10 +707,17 @@ class _ResumePembelianPopupState extends State<ResumePembelianPopup> {
                         children: [
                           Expanded(
                             child: Table(
+                              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                               columnWidths: const {
-                                0: FixedColumnWidth(100)
+                                0: FixedColumnWidth(140)
                               },
                               children: [
+                                TableRow(
+                                  children: [
+                                    const Text("Keterangan", style: TextStyle(fontSize: 21)),
+                                    SelectableText(": ${e.keterangan_paused}", style: TextStyle(fontSize: 21, color: Theme.of(context).primaryColorDark))
+                                  ]
+                                ),
                                 TableRow(
                                   children: [
                                     const Text("Kode"),

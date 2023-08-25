@@ -19,7 +19,7 @@ void main() async {
     }
   }
   WidgetsFlutterBinding.ensureInitialized();
-  await initDb(refresh: false, withSampleData: true);
+  await initDb(refresh: true, withSampleData: true);
   runApp(const MyApp());
 }
 

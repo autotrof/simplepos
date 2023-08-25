@@ -44,6 +44,7 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
       total_akhir REAL NOT NULL GENERATED ALWAYS AS (total - pajak) STORED,
       is_draft TINYINT(1) NOT NULL DEFAULT 1,
       is_paused TINYINT(1) NOT NULL DEFAULT 0,
+      keterangan_paused TEXT NULL,
       created_at INT DEFAULT 0,
       updated_at INT DEFAULT 0,
       deleted_at INT DEFAULT 0
