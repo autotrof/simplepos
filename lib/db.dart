@@ -1,5 +1,6 @@
 import 'dart:io' as io;
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:simplepos/models/pengaturan.dart';
 import 'package:simplepos/models/produk.dart';
@@ -15,7 +16,7 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
   final io.Directory appDocumentsDir = await getApplicationDocumentsDirectory();
   String dbPath = p.join(appDocumentsDir.path, "databases", _dbName);
 
-  if (refresh) {
+  if (refresh && kDebugMode) {
     await databaseFactory.deleteDatabase(dbPath);
   }
 
@@ -27,6 +28,7 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
       nama VARCHAR(255) NOT NULL,
       harga REAL NOT NULL,
       stok INT NULL,
+      aktif INT DEFAULT 1,
       created_at INT DEFAULT 0,
       updated_at INT DEFAULT 0,
       deleted_at INT NULL
@@ -77,7 +79,7 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
   ''';
   await db.execute(sql4);
 
-  if (withSampleData) {
+  if (kDebugMode && withSampleData) {
     initSampleData();
   }
 }

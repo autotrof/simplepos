@@ -669,13 +669,13 @@ class _ResumePembelianPopupState extends State<ResumePembelianPopup> {
                                 TableRow(
                                   children: [
                                     const Text("Waktu"),
-                                    SelectableText(": ${DateTime.fromMillisecondsSinceEpoch(e.created_at).toString()}")
+                                    SelectableText(": ${DateTime.fromMillisecondsSinceEpoch(e.created_at).toString().substring(0, 19)}")
                                   ]
                                 ),
                                 TableRow(
                                     children: [
                                       const Text("Total"),
-                                      SelectableText(": ${e.total.toString()}")
+                                      SelectableText(": Rp ${formatter.format(e.total)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red))
                                     ]
                                 )
                               ]
@@ -732,15 +732,15 @@ class _ResumePembelianPopupState extends State<ResumePembelianPopup> {
                               ),
                               Container(
                                 padding: const EdgeInsets.only(left:5, right: 5, top: 10, bottom: 10),
-                                child: SelectableText(item.jumlah.toString())
+                                child: SelectableText(formatter.format(item.jumlah))
                               ),
                               Container(
                                 padding: const EdgeInsets.only(left:5, right: 5, top: 10, bottom: 10),
-                                child: SelectableText(item.produk!.harga.toString())
+                                child: SelectableText(formatter.format(item.produk!.harga))
                               ),
                               Container(
                                 padding: const EdgeInsets.only(left:5, right: 5, top: 10, bottom: 10),
-                                child: SelectableText(item.subtotal.toString())
+                                child: SelectableText(formatter.format(item.subtotal))
                               )
                             ]
                           )).toList()

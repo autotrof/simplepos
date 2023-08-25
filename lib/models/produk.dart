@@ -13,6 +13,7 @@ class Produk extends Model{
   String nama;
   double harga;
   int? stok;
+  int aktif;
   int created_at;
   int updated_at;
   int? deleted_at;
@@ -23,7 +24,7 @@ class Produk extends Model{
     return prefix + randomKey;
   }
 
-  Produk({this.kode = '', required this.nama, required this.harga, this.stok, this.created_at = 0, this.updated_at = 0, this.deleted_at});
+  Produk({this.kode = '', required this.nama, required this.harga, this.stok, this.aktif = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at});
 
   @override
   Map<String, dynamic> toMap() {
@@ -32,6 +33,7 @@ class Produk extends Model{
       'nama': nama,
       'harga': harga,
       'stok': stok,
+      'aktif': aktif,
       'created_at': created_at,
       'updated_at': updated_at,
     };
@@ -39,7 +41,7 @@ class Produk extends Model{
 
   @override
   String toString() {
-    return 'Produk{kode: $kode, nama: $nama, harga: $harga, stok: $stok, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
+    return 'Produk{kode: $kode, nama: $nama, harga: $harga, stok: $stok, aktif: $aktif, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
   }
 
   static Produk fromMap(Map<String, dynamic> data) {
@@ -54,8 +56,9 @@ class Produk extends Model{
       nama: data["nama"],
       harga: double.parse(data["harga"].toString()),
       stok: stok,
-      created_at: int.parse(data["created_at"].toString()),
-      updated_at: int.parse(data["updated_at"].toString()),
+      aktif: data["aktif"],
+      created_at: data["created_at"],
+      updated_at: data["updated_at"]
     );
     p.kode = data["kode"];
     p.deleted_at = data["deleted_at"];
@@ -74,7 +77,6 @@ class Produk extends Model{
       kode = await generateKode();
     }
     await db.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
-    debugPrint("SAVED");
     return this;
   }
 
@@ -96,7 +98,6 @@ class Produk extends Model{
     } catch (exception) {
       return exception;
     }
-    debugPrint("DELETED");
     return true;
   }
 
