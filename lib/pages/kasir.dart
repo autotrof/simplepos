@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:simplepos/models/pesanan.dart';
 import 'package:simplepos/models/pesanan_item.dart';
 import 'package:simplepos/models/produk.dart';
+import 'package:simplepos/widgets/touchable_opacity.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
@@ -51,370 +52,380 @@ class _KasirPageState extends State<KasirPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[300],
-      body: Column(children: [
-        BootstrapRow(children: [
-          BootstrapCol(
-            xs: 6,
-            sm: 7,
-            md: 7,
-            lg: 7,
-            xl: 7,
-            xxl: 8,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: Column(children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 15, top: 10),
-                  child: TextFormField(
-                    autocorrect: false,
-                    focusNode: _inputCariProdukNode,
-                    decoration: const InputDecoration(
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(9)), borderSide: BorderSide(color: Colors.black38)),
-                      labelText: 'Cari Produk',
-                      filled: true,
-                      fillColor: Colors.white
-                    ),
-                    onChanged: (text) {
-                      getProduk();
-                    },
-                    onFieldSubmitted: (text) {
-                      if (text.trim().isNotEmpty) {
-                        Produk produkInput = _items.firstWhere((element) => element.kode == text.trim());
-                        if (produkInput == null && _items.length == 1) {
-                          produkInput = _items[0];
-                        } else if (produkInput == null) {
-                          return ;
-                        }
-                        tambahItemPesanan(produkInput);
-                        _cariProdukController.clear();
-                        getProduk();
-                        _inputCariProdukNode.requestFocus();
-                      }
-                    },
-                    controller: _cariProdukController
-                  )
-                ),
-                Column(
-                  children: [
-                    Table(
-                      columnWidths: const {
-                        3: FixedColumnWidth(100),
-                        4: FixedColumnWidth(60)
-                      },
-                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                      border: TableBorder.all(color: Colors.black26),
-                      children: <TableRow>[
-                        TableRow(
-                          children: [
-                            tableHeader(data: 'kode', label: 'Kode'),
-                            tableHeader(data: 'nama', label: 'Produk'),
-                            tableHeader(data: 'harga', label: 'Harga'),
-                            tableHeader(data: 'stok', label: 'Stok'),
-                            tableHeader(data: '', label: ''),
-                          ]
-                        )
-                      ]
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height - appBar.preferredSize.height + topHeightAdjustment,
-                      child: SingleChildScrollView(
-                        physics: const ClampingScrollPhysics(),
-                        child: _items.isNotEmpty ? Table(
-                          columnWidths: const {
-                            3: FixedColumnWidth(100),
-                            4: FixedColumnWidth(60)
-                          },
-                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                          border: TableBorder.all(color: Colors.black26),
-                          children: <TableRow>[
-                            ..._items.map((produk) {
-                              return TableRow(
-                              decoration: const BoxDecoration(color: Colors.white),
-                              children: [
-                                Container(padding: const EdgeInsets.all(10), child: SelectableText(produk.kode)),
-                                Container(padding: const EdgeInsets.all(10), child: SelectableText(produk.nama)),
-                                Container(padding: const EdgeInsets.all(10), child: SelectableText("Rp ${formatter.format(produk.harga.ceil())}")),
-                                Container(
-                                  alignment: Alignment.center,
-                                  padding: const EdgeInsets.all(10), 
-                                  child: produk.stok.toString() == 'null' ? 
-                                    const Text("∞", style: TextStyle(color: Colors.green))
-                                    :
-                                    SelectableText(formatter.format(produk.stok).toString())
-                                ),
-                                Container(
-                                  alignment: Alignment.centerRight, 
-                                  padding: const EdgeInsets.all(10), 
-                                  child: IconButton(
-                                    color: Theme.of(context).primaryColor, 
-                                    icon: const Icon(Icons.shopping_cart_checkout_outlined), 
-                                    onPressed: () => tambahItemPesanan(produk)
-                                  )
-                                )
-                              ]
-                            );
-                            })
-                            .toList()
-                          ],
-                        ) : Table(
-                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                          border: TableBorder.all(color: Colors.black26),
-                          children: <TableRow>[
-                            TableRow(
-                              children: [
-                                Container(
-                                  alignment: Alignment.center,
-                                  padding: const EdgeInsets.only(top: 20, bottom: 20),
-                                  decoration: BoxDecoration(color: Colors.amber[50]),
-                                  child: const Text("Produk tidak ditemukan", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
-                                )
-                              ]
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                    Container(decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black12, width: 2))))
-                  ],
-                )
-              ])
-            )
-          ),
-          BootstrapCol(
-            xs: 6,
-            sm: 5,
-            md: 5,
-            lg: 5,
-            xl: 5,
-            xxl: 4,
-            child: Padding(
-              padding: const EdgeInsets.only(top:18, left: 8, right: 8, bottom: 8),
+      body: SingleChildScrollView(
+        child: Column(children: [
+          BootstrapRow(children: [
+            BootstrapCol(
+              xs: 12,
+              sm: 7,
+              md: 7,
+              lg: 7,
+              xl: 7,
+              xxl: 8,
               child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey, width: 1, style: BorderStyle.solid),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.white
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 10), 
-                          child: ElevatedButton.icon (
-                            style: ButtonStyle(
-                              shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                              backgroundColor: _currentPesanan.items!.isNotEmpty ? MaterialStatePropertyAll(Colors.red[100]) : const MaterialStatePropertyAll(Colors.grey),
-                              alignment: Alignment.centerLeft
-                            ),
-                            onPressed: () {
-                              if (_currentPesanan.items!.isNotEmpty) {
-                                batal();
-                              }
-                            },
-                            icon: Icon(Icons.cancel, color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54),
-                            label: Text("Batal", style: TextStyle(color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54, fontWeight: FontWeight.bold))
-                          )
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(right: 10), 
-                          child: ElevatedButton.icon (
-                            style: ButtonStyle(
-                              shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                              backgroundColor: _currentPesanan.items!.isNotEmpty ? MaterialStatePropertyAll(Colors.red[100]) : const MaterialStatePropertyAll(Colors.grey),
-                              alignment: Alignment.centerLeft
-                            ),
-                            onPressed: () {
-                              if (_currentPesanan.items!.isNotEmpty) {
-                                showFormTahanPesanan();
-                              }
-                            },
-                            icon: Icon(Icons.pause, color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54),
-                            label: Text("Tahan", style: TextStyle(color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54, fontWeight: FontWeight.bold))
-                          )
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: resumePesanan, 
-                          style: ButtonStyle(
-                            shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                            backgroundColor: MaterialStatePropertyAll(Colors.green[100]),
-                            alignment: Alignment.centerLeft
-                          ),
-                          icon: Icon(Icons.rotate_left_outlined, color: Colors.green[600]), 
-                          label: Text("Resume", style: TextStyle(color: Colors.green[600]))
-                        )
-                      ]
-                    ),
-                    const Divider(color: Colors.black, height: 40, thickness: 0.3, indent: 0),
-                    Table(
-                      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                      border: TableBorder.all(color: Colors.black26),
-                      columnWidths: const {
-                        4: FixedColumnWidth(60)
+                padding: const EdgeInsets.all(8),
+                child: Column(children: [
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 15, top: 10),
+                    child: TextFormField(
+                      autocorrect: false,
+                      focusNode: _inputCariProdukNode,
+                      decoration: const InputDecoration(
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(9)), borderSide: BorderSide(color: Colors.black38)),
+                        labelText: 'Cari Produk',
+                        filled: true,
+                        fillColor: Colors.white
+                      ),
+                      onChanged: (text) {
+                        getProduk();
                       },
-                      children: [
-                        TableRow(
-                          children: [
-                            tableHeader(data: 'nama', label: 'Produk'),
-                            tableHeader(data: 'nama', label: 'Jumlah'),
-                            tableHeader(data: 'harga', label: 'Harga'),
-                            tableHeader(data: 'harga', label: 'Subtotal'),
-                            tableHeader(data: 'kode', label: ' '),
-                          ]
-                        )
-                      ]
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height - appBar.preferredSize.height - 25 + topHeightAdjustment,
-                      child: SingleChildScrollView(
-                        controller: _scrollPembelianItemController,
-                        physics: const ClampingScrollPhysics(),
-                        child: _itemSelected.isNotEmpty ? Table(
-                          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                          border: TableBorder.all(color: Colors.black26),
-                          columnWidths: const {
-                            4: FixedColumnWidth(60)
-                          },
-                          children: [
-                            ..._itemSelected.asMap().entries.map((entry) => TableRow(
+                      onFieldSubmitted: (text) {
+                        if (text.trim().isNotEmpty) {
+                          Produk produkInput = _items.firstWhere((element) => element.kode == text.trim());
+                          if (produkInput == null && _items.length == 1) {
+                            produkInput = _items[0];
+                          } else if (produkInput == null) {
+                            return ;
+                          }
+                          tambahItemPesanan(produkInput);
+                          _cariProdukController.clear();
+                          getProduk();
+                          _inputCariProdukNode.requestFocus();
+                        }
+                      },
+                      controller: _cariProdukController
+                    )
+                  ),
+                  Column(
+                    children: [
+                      Table(
+                        columnWidths: const {
+                          3: FixedColumnWidth(100),
+                          4: FixedColumnWidth(60)
+                        },
+                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                        border: TableBorder.all(color: Colors.black26),
+                        children: <TableRow>[
+                          TableRow(
+                            children: [
+                              tableHeader(data: 'kode', label: 'Kode'),
+                              tableHeader(data: 'nama', label: 'Produk'),
+                              tableHeader(data: 'harga', label: 'Harga'),
+                              tableHeader(data: 'stok', label: 'Stok'),
+                              tableHeader(data: '', label: ''),
+                            ]
+                          )
+                        ]
+                      ),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height - appBar.preferredSize.height + topHeightAdjustment + 13,
+                        child: SingleChildScrollView(
+                          physics: const ClampingScrollPhysics(),
+                          child: _items.isNotEmpty ? Table(
+                            columnWidths: const {
+                              3: FixedColumnWidth(100),
+                              4: FixedColumnWidth(60)
+                            },
+                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                            border: TableBorder.all(color: Colors.black26),
+                            children: <TableRow>[
+                              ..._items.map((produk) {
+                                return TableRow(
                                 decoration: const BoxDecoration(color: Colors.white),
                                 children: [
-                                  Container(padding: const EdgeInsets.all(10), child: SelectableText(entry.value.nama)),
-                                  Padding(
-                                    padding: const EdgeInsets.all(10), 
-                                    child: TextFormField(
-                                      keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(
-                                        prefixIcon: IconButton(
-                                          icon: const Icon(Icons.remove, color: Colors.red,  size: 18),
-                                          onPressed: () {
-                                            kurangiItemPesanan(entry.value);
-                                          },
-                                        ),
-                                        suffixIcon: IconButton(
-                                          icon: const Icon(Icons.add, color: Colors.green, size: 18),
-                                          onPressed: () {
-                                            tambahItemPesanan(entry.value);
-                                          },
-                                        )
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      onChanged: (text) async {
-                                        if (text.isEmpty || text.trim() == '' || text.trim() == '0') {
-                                          _inputJumlahPembelian[entry.value.kode]?.text = "1";
-                                        }
-                                        if (int.tryParse(text) != null) {
-                                          PesananItem item = _currentPesanan.items!.firstWhere((element) => element.kode_produk == entry.value.kode);
-                                          item.jumlah = int.parse(_inputJumlahPembelian[entry.value.kode]!.text);
-                                          await item.save();
-                                          await _currentPesanan.save();
-                                          setState(() {});
-                                        }
-                                      },
-                                      controller: _inputJumlahPembelian[entry.value.kode]
-                                    )
-                                  ),
-                                  Container(padding: const EdgeInsets.all(10), child: SelectableText(formatter.format(entry.value.harga.ceil()))),
-                                  Container(padding: const EdgeInsets.all(10), child: SelectableText(formatter.format((entry.value.harga * int.parse(_inputJumlahPembelian[entry.value.kode]!.text)).ceil()))),
+                                  Container(padding: const EdgeInsets.all(10), child: SelectableText(produk.kode)),
+                                  Container(padding: const EdgeInsets.all(10), child: SelectableText(produk.nama)),
+                                  Container(padding: const EdgeInsets.all(10), child: SelectableText("Rp ${formatter.format(produk.harga.ceil())}")),
                                   Container(
-                                    padding: const EdgeInsets.all(10), 
                                     alignment: Alignment.center,
+                                    padding: const EdgeInsets.all(10), 
+                                    child: produk.stok.toString() == 'null' ? 
+                                      const Text("∞", style: TextStyle(color: Colors.green))
+                                      :
+                                      SelectableText(formatter.format(produk.stok).toString())
+                                  ),
+                                  Container(
+                                    alignment: Alignment.centerRight, 
+                                    padding: const EdgeInsets.all(10), 
                                     child: IconButton(
-                                      style: ButtonStyle(
-                                        padding: const MaterialStatePropertyAll(EdgeInsets.all(0)),
-                                        shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(18)))
-                                      ),
-                                      tooltip: "Hapus item",
-                                      icon: const Icon(
-                                        Icons.highlight_remove, 
-                                        color: Colors.redAccent, 
-                                        weight: 1
-                                      ),
-                                      onPressed: () {
-                                        hapusItemPesanan(entry.value);
-                                      }
+                                      color: Theme.of(context).primaryColor, 
+                                      icon: const Icon(Icons.shopping_cart_checkout_outlined), 
+                                      onPressed: () => tambahItemPesanan(produk)
                                     )
                                   )
                                 ]
+                              );
+                              })
+                              .toList()
+                            ],
+                          ) : Table(
+                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                            border: TableBorder.all(color: Colors.black26),
+                            children: <TableRow>[
+                              TableRow(
+                                children: [
+                                  Container(
+                                    alignment: Alignment.center,
+                                    padding: const EdgeInsets.only(top: 20, bottom: 20),
+                                    decoration: BoxDecoration(color: Colors.amber[50]),
+                                    child: const Text("Produk tidak ditemukan", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+                                  )
+                                ]
                               )
-                            ).toList()
-                          ],
-                        ) : Table(
-                          border: TableBorder.all(color: Colors.black26),
-                          children: [
-                            TableRow(
-                              decoration: BoxDecoration(color: Colors.yellow[50]),
-                              children: const [
-                                Padding(padding: EdgeInsets.all(10), child: Text('Tidak ada item dipilih', textAlign: TextAlign.center, style: TextStyle(color: Colors.red)))
-                              ]
-                            )
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+                      Container(decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black12, width: 2))))
+                    ],
+                  )
+                ])
+              )
+            ),
+            BootstrapCol(
+              xs: 12,
+              sm: 5,
+              md: 5,
+              lg: 5,
+              xl: 5,
+              xxl: 4,
+              child: Padding(
+                padding: const EdgeInsets.only(top:18, left: 8, right: 8, bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black26, width: 1, style: BorderStyle.solid),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10), 
+                            child: TouchableOpacity(
+                              width: 75,
+                              height: 58,
+                              disabled: _currentPesanan.items!.isEmpty,
+                              borderRadius: 12,
+                              theme: Colors.red,
+                              onTap: batal,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.cancel, color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54),
+                                  Text("Batal", style: TextStyle(color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54, fontWeight: FontWeight.bold))
+                                ] 
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 10), 
+                            child: TouchableOpacity(
+                              width: 75,
+                              height: 58,
+                              borderRadius: 12,
+                              disabled: _currentPesanan.items!.isEmpty,
+                              theme: Colors.red,
+                              onTap: showFormTahanPesanan,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.pause, color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54),
+                                  Text("Tahan", style: TextStyle(color: _currentPesanan.items!.isNotEmpty ? Colors.red : Colors.black54, fontWeight: FontWeight.bold))
+                                ] 
+                              ),
+                            )
+                          ),
+                          TouchableOpacity(
+                            width: 75,
+                            height: 58,
+                            borderRadius: 12,
+                            theme: Colors.green,
+                            onTap: resumePesanan,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Icon(Icons.rotate_left_outlined, color: Colors.green[600]),
+                                Text("Resume", style: TextStyle(color: Colors.green[600], fontWeight: FontWeight.w600))
+                              ]
+                            )
+                          )
+                        ]
+                      ),
+                      const Divider(color: Colors.black, height: 40, thickness: 0.3, indent: 0),
+                      Table(
+                        defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                        border: TableBorder.all(color: Colors.black26),
+                        columnWidths: const {
+                          1: FixedColumnWidth(145),
+                          4: FixedColumnWidth(45),
+                        },
+                        children: [
+                          TableRow(
+                            children: [
+                              tableHeader(data: 'nama', label: 'Produk'),
+                              tableHeader(data: 'nama', label: 'Jumlah'),
+                              tableHeader(data: 'harga', label: 'Harga'),
+                              tableHeader(data: 'harga', label: 'Subtotal'),
+                              tableHeader(data: 'kode', label: ' '),
+                            ]
+                          )
+                        ]
+                      ),
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height - appBar.preferredSize.height - 25 + topHeightAdjustment,
+                        child: SingleChildScrollView(
+                          controller: _scrollPembelianItemController,
+                          physics: const ClampingScrollPhysics(),
+                          child: _itemSelected.isNotEmpty ? Table(
+                            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                            border: TableBorder.all(color: Colors.black26),
+                            columnWidths: const {
+                              1: FixedColumnWidth(145),
+                              4: FixedColumnWidth(45)
+                            },
+                            children: [
+                              ..._itemSelected.asMap().entries.map((entry) => TableRow(
+                                  decoration: const BoxDecoration(color: Colors.white),
+                                  children: [
+                                    Container(padding: const EdgeInsets.all(10), child: SelectableText(entry.value.nama)),
+                                    Padding(
+                                      padding: const EdgeInsets.all(10), 
+                                      child: TextFormField(
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          prefixIcon: IconButton(
+                                            icon: const Icon(Icons.remove, color: Colors.red,  size: 18),
+                                            onPressed: () {
+                                              kurangiItemPesanan(entry.value);
+                                            },
+                                          ),
+                                          suffixIcon: IconButton(
+                                            icon: Icon(Icons.add, size: 18, color: Colors.green[800]),
+                                            onPressed: () {
+                                              tambahItemPesanan(entry.value);
+                                            },
+                                          )
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        onChanged: (text) async {
+                                          if (text.isEmpty || text.trim() == '' || text.trim() == '0') {
+                                            _inputJumlahPembelian[entry.value.kode]?.text = "1";
+                                          }
+                                          if (int.tryParse(text) != null) {
+                                            PesananItem item = _currentPesanan.items!.firstWhere((element) => element.kode_produk == entry.value.kode);
+                                            item.jumlah = int.parse(_inputJumlahPembelian[entry.value.kode]!.text);
+                                            await item.save();
+                                            await _currentPesanan.save();
+                                            setState(() {});
+                                          }
+                                        },
+                                        controller: _inputJumlahPembelian[entry.value.kode]
+                                      )
+                                    ),
+                                    Container(padding: const EdgeInsets.all(10), child: SelectableText(formatter.format(entry.value.harga.ceil()))),
+                                    Container(padding: const EdgeInsets.all(10), child: SelectableText(formatter.format((entry.value.harga * int.parse(_inputJumlahPembelian[entry.value.kode]!.text)).ceil()))),
+                                    Container(
+                                      padding: const EdgeInsets.all(10), 
+                                      alignment: Alignment.center,
+                                      child: IconButton(
+                                        style: ButtonStyle(
+                                          padding: const MaterialStatePropertyAll(EdgeInsets.all(0)),
+                                          shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(18)))
+                                        ),
+                                        tooltip: "Hapus item",
+                                        icon: const Icon(
+                                          Icons.highlight_remove, 
+                                          color: Colors.redAccent, 
+                                          weight: 1
+                                        ),
+                                        onPressed: () {
+                                          hapusItemPesanan(entry.value);
+                                        }
+                                      )
+                                    )
+                                  ]
+                                )
+                              ).toList()
+                            ],
+                          ) : Table(
+                            border: TableBorder.all(color: Colors.black26),
+                            children: [
+                              TableRow(
+                                decoration: BoxDecoration(color: Colors.yellow[50]),
+                                children: const [
+                                  Padding(padding: EdgeInsets.all(10), child: Text('Tidak ada item dipilih', textAlign: TextAlign.center, style: TextStyle(color: Colors.red)))
+                                ]
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
 
-                  ],
+                    ],
+                  ),
+                ))
+              )
+          ]),
+          Container(
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(8)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 7), 
+                        child: ElevatedButton.icon (
+                          style: ButtonStyle(
+                            shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                            backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
+                            alignment: Alignment.centerLeft
+                          ),
+                          onPressed: () {}, 
+                          icon: const Icon(Icons.print),
+                          label: const Text("Cetak"),
+                        )
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 7), 
+                        child: ElevatedButton.icon (
+                          style: ButtonStyle(
+                            shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                            backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
+                            alignment: Alignment.centerLeft
+                          ),
+                          onPressed: () async {
+                            await payPesanan();
+                          }, 
+                          icon: const Icon(Icons.payments_outlined),
+                          label: const Text("Bayar")
+                        )
+                      ),
+                    ]
+                  ),
                 ),
-              ))
-            )
+                Expanded(child: Container(
+                  padding: const EdgeInsets.only(bottom: 8, left: 16),
+                  decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(4)),
+                  child: Row(
+                    children: [
+                      SelectableText("Rp ${getTotal(rounded: true)}", style: const TextStyle(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold)),
+                      SelectableText("  ${getTotal() !='0' ? getTotal() : ''}", style: const TextStyle(color: Colors.black12, fontSize: 40, fontWeight: FontWeight.bold))
+                    ]
+                  ),
+                ))
+              ],
+            ),
+          )
         ]),
-        Container(
-          margin: const EdgeInsets.all(8),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(8)),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 20),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 7), 
-                      child: ElevatedButton.icon (
-                        style: ButtonStyle(
-                          shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                          backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
-                          alignment: Alignment.centerLeft
-                        ),
-                        onPressed: () {}, 
-                        icon: const Icon(Icons.print),
-                        label: const Text("Cetak"),
-                      )
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 7), 
-                      child: ElevatedButton.icon (
-                        style: ButtonStyle(
-                          shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                          backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
-                          alignment: Alignment.centerLeft
-                        ),
-                        onPressed: () async {
-                          await payPesanan();
-                        }, 
-                        icon: const Icon(Icons.payments_outlined),
-                        label: const Text("Bayar")
-                      )
-                    ),
-                  ]
-                ),
-              ),
-              Expanded(child: Container(
-                padding: const EdgeInsets.only(bottom: 8, left: 16),
-                decoration: BoxDecoration(border: Border.all(color: Colors.black26), borderRadius: BorderRadius.circular(4)),
-                child: Row(
-                  children: [
-                    SelectableText("Rp ${getTotal(rounded: true)}", style: const TextStyle(color: Colors.black, fontSize: 40, fontWeight: FontWeight.bold)),
-                    SelectableText("  ${getTotal() !='0' ? getTotal() : ''}", style: const TextStyle(color: Colors.black12, fontSize: 40, fontWeight: FontWeight.bold))
-                  ]
-                ),
-              ))
-            ],
-          ),
-        )
-      ])
+      )
     );
   }
 
@@ -577,7 +588,11 @@ class _KasirPageState extends State<KasirPage> {
         child: TextFormField(
           autofocus: true,
           autocorrect: false,
-          controller: _keteranganTahanPesananController
+          controller: _keteranganTahanPesananController,
+          onFieldSubmitted: (string) {
+            tahanPesanan();
+            Navigator.pop(context);
+          },
         ),
       ),
       actions: [
@@ -694,11 +709,15 @@ class _ResumePembelianPopupState extends State<ResumePembelianPopup> {
         children: [
           Padding(padding: const EdgeInsets.only(top:10, bottom: 20), child: 
             Table(
+              columnWidths: const {
+                0: FixedColumnWidth(50),
+                2: FixedColumnWidth(50)
+              },
               children: [
                 TableRow(
                   children: [
                     const SizedBox.shrink(),
-                    const Text("Daftar Pembelian Ditahan", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600)),
+                    const Text("Daftar Pembelian Ditahan", textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
                     Row(children: [
                       const Expanded(child: SizedBox.shrink()),
                       IconButton(

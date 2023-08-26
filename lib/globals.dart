@@ -65,7 +65,7 @@ Widget tableHeader ({required String data, String label = '', bool sortable = tr
   Widget innerWidget = Container(
     decoration: const BoxDecoration(color: Colors.lightBlue),
     padding: EdgeInsets.all(padding), 
-    child: SelectableText(label.isEmpty ? data : label, style: const TextStyle(fontWeight: FontWeight.bold))
+    child: SelectableText(label.isEmpty ? data : label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))
   );
 
   return innerWidget;
