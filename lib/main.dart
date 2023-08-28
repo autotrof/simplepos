@@ -1,6 +1,6 @@
-import 'dart:io';
+// import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
+// import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 import 'package:simplepos/db.dart';
 import 'package:simplepos/pages/kasir.dart';
 import 'package:simplepos/pages/produk.dart';
@@ -48,7 +48,7 @@ class Layout extends StatefulWidget {
 }
 
 class _LayoutState extends State<Layout> {
-  String _activePage = 'kasir';
+  String _activePage = 'produk';
 
   static const Map<String, Map<String, dynamic>>_menus = {
     "kasir": {

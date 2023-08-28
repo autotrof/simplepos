@@ -13,6 +13,7 @@ class Produk extends Model{
   String nama;
   double harga;
   int? stok;
+  String? gambar;
   int aktif;
   int created_at;
   int updated_at;
@@ -24,7 +25,7 @@ class Produk extends Model{
     return prefix + randomKey;
   }
 
-  Produk({this.kode = '', required this.nama, required this.harga, this.stok, this.aktif = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at});
+  Produk({this.kode = '', required this.nama, required this.harga, this.stok, this.gambar, this.aktif = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at});
 
   @override
   Map<String, dynamic> toMap() {
@@ -33,6 +34,7 @@ class Produk extends Model{
       'nama': nama,
       'harga': harga,
       'stok': stok,
+      'gambar': gambar,
       'aktif': aktif,
       'created_at': created_at,
       'updated_at': updated_at,
@@ -41,7 +43,7 @@ class Produk extends Model{
 
   @override
   String toString() {
-    return 'Produk{kode: $kode, nama: $nama, harga: $harga, stok: $stok, aktif: $aktif, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
+    return 'Produk{kode: $kode, nama: $nama, harga: $harga, stok: $stok, gambar: $gambar, aktif: $aktif, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
   }
 
   static Produk fromMap(Map<String, dynamic> data) {
@@ -56,6 +58,7 @@ class Produk extends Model{
       nama: data["nama"],
       harga: double.parse(data["harga"].toString()),
       stok: stok,
+      gambar: data["gambar"],
       aktif: data["aktif"],
       created_at: data["created_at"],
       updated_at: data["updated_at"]

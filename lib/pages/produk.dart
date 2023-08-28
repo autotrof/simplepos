@@ -1,4 +1,4 @@
-import 'package:barcode/barcode.dart';
+// import 'package:barcode/barcode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:simplepos/globals.dart';
@@ -26,6 +26,7 @@ class _ProdukPageState extends State<ProdukPage> {
   late TextEditingController _inputNamaProdukController;
   late TextEditingController _inputHargaProdukController;
   late TextEditingController _inputStokProdukController;
+  late bool _showClearButton;
 
   @override
   void initState() {
@@ -36,6 +37,7 @@ class _ProdukPageState extends State<ProdukPage> {
     _inputNamaProdukController = TextEditingController();
     _inputHargaProdukController = TextEditingController();
     _inputStokProdukController = TextEditingController();
+    _showClearButton = false;
 
     _page = 1;
     _pageList = [];
@@ -81,6 +83,7 @@ class _ProdukPageState extends State<ProdukPage> {
         _inputHargaProdukController.clear();
         _inputStokProdukController.clear();
       } catch (e) {
+        // ignore: use_build_context_synchronously
         alertError(context: context, text: "Gagal menyimpan produk : ${e.toString()}");
       }
     }
@@ -278,7 +281,7 @@ class _ProdukPageState extends State<ProdukPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<TableRow> tableBody = [];
+    /* List<TableRow> tableBody = [];
     if (_items.isNotEmpty) {
       for (Produk produk in _items) {
         tableBody.add(
@@ -360,89 +363,102 @@ class _ProdukPageState extends State<ProdukPage> {
           ]
         )
       );
-    }
+    } */
     
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(color: Colors.grey[200]),
         padding: const EdgeInsets.all(8),
-        child: Column(children: [
-          Container(
-            decoration: const BoxDecoration(color: Colors.white), 
-            margin: const EdgeInsets.only(bottom: 15, top: 10),
-            child: TextFormField(
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Cari Produk',
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.only(left: 10),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: Colors.black26, ))
               ),
-              onChanged: (text) {
-                getProduk(reset: true);
-              },
-              controller: _cariProdukController,
-            )
-          ),
-          Expanded(child: SingleChildScrollView(child: Column(children: [
-            Table(
-              columnWidths: const {
-                5: FixedColumnWidth(170)
-              },
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              border: TableBorder.all(color: Colors.black26),
-              children: <TableRow>[
-                TableRow(
-                  children: [
-                    tableHeader(data: 'kode', label: 'Barcode'),
-                    tableHeader(data: 'kode', label: 'Kode'),
-                    tableHeader(data: 'nama', label: 'Produk'),
-                    tableHeader(data: 'harga', label: 'Harga'),
-                    tableHeader(data: 'stok', label: 'Stok'),
-                    tableHeader(data: '###', label: ''),
-                  ]
-                )
-              ]
+              child: Row(
+                children: [
+                  SizedBox.fromSize(
+                    size: const Size(85, 30),
+                    child: DropdownButtonFormField<String>(
+                      decoration: const InputDecoration.collapsed(hintText: ''),
+                      value: "1",
+                      items: const <DropdownMenuItem<String>>[
+                        DropdownMenuItem(value: "1", child: Text("Page 1")),
+                        DropdownMenuItem(value: "2", child: Text("Page 2")),
+                        DropdownMenuItem(value: "3", child: Text("Page 3")),
+                      ], 
+                      onChanged: (value) {
+                        
+                      },
+                    ),
+                  ),
+                  Expanded(child: TextFormField(
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      labelText: 'Cari Produk',
+                      labelStyle: const TextStyle(color: Colors.black54),
+                      contentPadding: const EdgeInsets.only(left: 10, right: 10),
+                      suffixIcon: _showClearButton ? 
+                        IconButton(onPressed: () {
+                          _cariProdukController.clear();
+                          setState(() {
+                            _showClearButton = false;
+                          });
+                        }, 
+                        icon: const Icon(Icons.close_outlined)) : 
+                        const Icon(Icons.search_rounded)
+                    ),
+                    onChanged: (text) {
+                      if (text != '') {
+                        setState(() {
+                          _showClearButton = true;
+                        });
+                      }
+                      getProduk(reset: true);
+                    },
+                    controller: _cariProdukController,
+                  ))
+                ],
+              )
             ),
-            Table(
-              columnWidths: const {
-                5: FixedColumnWidth(170)
-              },
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              border: TableBorder.all(color: Colors.black26),
-              children: <TableRow>[
-                ...tableBody
-              ],
-            )
-          ]))),
-          Container(
-            padding: const EdgeInsets.only(top: 15, bottom: 15), 
-            child: Row(
-            children: [
-              const Text('Halaman: ', style: TextStyle(fontSize: 18)),
-              _pageList.isNotEmpty ?
-              Container(
-                padding: const EdgeInsets.only(top: 0, bottom: 0, left: 10, right: 0),
-                decoration: const BoxDecoration(
-                  color: Colors.white, 
-                  borderRadius: BorderRadius.all(Radius.circular(10)),
-                ),
-                child: DropdownButton(
-                  icon: const Icon(Icons.arrow_drop_down),
-                  iconSize: 42,
-                  underline: const SizedBox(),
-                  value: _page,
-                  items: _pageList.map((e) => DropdownMenuItem(value: e, child: Text(e.toString()))).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _page = val!;
-                    });
-                    getProduk();
-                  },
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12), 
+                child: ListView(
+                  children: _items.map((e) => Container(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.all(10),
+                    decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black12))),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          margin: const EdgeInsets.only(right: 10),
+                          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(50), border: Border.all(color: Colors.black12)),
+                          child: const Icon(Icons.image, color: Colors.black45),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(e.nama, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 17))),
+                              Text("Sisa : ${e.stok ?? 'UNLIMITED'}", style: const TextStyle(color: Colors.black87)),
+                            ]
+                          )
+                        ),
+                        Text(formatter.format(e.harga), style: const TextStyle(fontWeight: FontWeight.w500),)
+                      ],
+                    ),
+                  )).toList(),
                 )
               )
-              :
-              const SizedBox.shrink()
-            ],
-          ))
-        ]),
+            ),
+          ]
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showModalProduk(type: 'create'), 
