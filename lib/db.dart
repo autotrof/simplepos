@@ -26,6 +26,7 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
     CREATE TABLE IF NOT EXISTS produk (
       kode VARCHAR(16) PRIMARY KEY,
       nama VARCHAR(255) NOT NULL,
+      gambar VARCHAR(255) NULL,
       harga REAL NOT NULL,
       stok INT NULL,
       aktif INT DEFAULT 1,

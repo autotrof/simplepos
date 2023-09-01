@@ -47,6 +47,10 @@ dependencies:
   top_snackbar_flutter:
   nanoid: ^1.0.0
   flutter_jailbreak_detection:
+  image_picker: ^0.8.4+4
+  image_cropper: ^1.4.1
+  permission_handler:
+  image_gallery_saver: ^1.7.1
 
 dev_dependencies:
   flutter_test:

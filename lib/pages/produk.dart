@@ -1,6 +1,10 @@
 // import 'package:barcode/barcode.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:simplepos/globals.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -44,6 +48,17 @@ class _ProdukPageState extends State<ProdukPage> {
     _sort = ['kode', 'desc'];
     _items = <Produk>[];
     getProduk();
+    _requestPermission();
+  }
+
+  Future<bool> _requestPermission() async {
+    Map<Permission, PermissionStatus> result = await [Permission.storage, Permission.camera].request();
+    debugPrint(result[Permission.storage].toString());
+    debugPrint(result[Permission.camera].toString());
+    if (result[Permission.storage] == PermissionStatus.granted && result[Permission.camera] == PermissionStatus.granted) {
+      return true;
+    }
+    return false;
   }
 
   Future<void> hapusProduk(Produk produk) async {
@@ -104,11 +119,24 @@ class _ProdukPageState extends State<ProdukPage> {
     }
 
     showModalBottomSheet(context: context, builder: (BuildContext ctx) {
+      Future<File?> getImage(ImageSource source) async {
+          final bool isGranted = await _requestPermission();
+          if (!isGranted) {
+            return null;
+          }
+          final ImagePicker picker = ImagePicker();
+          final XFile? image = await picker.pickImage(source: source);
+          if (image != null) {
+            return File(image.path);
+          }
+          return null;
+      }
+
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 50),
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Form(
@@ -185,29 +213,67 @@ class _ProdukPageState extends State<ProdukPage> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [ThousandsSeparatorInputFormatter()],
                   )),
-                  Container(
-                    alignment: Alignment.bottomRight,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        await simpanProduk();
-
-                        showTopSnackBar(
-                            // ignore: use_build_context_synchronously
-                            Overlay.of(context),
-                            const CustomSnackBar.success(
-                              message: "Berhasil menyimpan produk",
-                            ),
-                            displayDuration: const Duration(seconds: 2),
-                        );
-                      }, 
-                      style: ButtonStyle(
-                        foregroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorDark),
-                        elevation: MaterialStateProperty.all(1),
-                        backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
-                        padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 20, bottom: 20, left: 25, right: 25))
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          showDialog(context: context, builder: (BuildContext ctx) {
+                            return AlertDialog(
+                              title: const Text("Pilih Gambar Dari"),
+                              content: Row(
+                                children: [
+                                  TextButton(onPressed: () async {
+                                    await getImage(ImageSource.camera);
+                                    Navigator.pop(ctx);
+                                  }, child: const Text("Kamera")),
+                                  const Expanded(child: Row()),
+                                  TextButton(onPressed: () async {
+                                    await getImage(ImageSource.gallery);
+                                    Navigator.pop(ctx);
+                                  }, child: const Text("Galeri")),
+                                ],
+                              )
+                            );
+                          });
+                        },
+                        style: ButtonStyle(
+                          shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                          foregroundColor: MaterialStatePropertyAll(Colors.green[800]),
+                          elevation: MaterialStateProperty.all(1),
+                          backgroundColor: const MaterialStatePropertyAll(Colors.greenAccent),
+                          padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
+                        ),
+                        child: const Text('Pilih Gambar'),
                       ),
-                      child: const Text('Simpan'),
-                    ),
+                      const Expanded(
+                        child: Row()
+                      ),
+                      Container(
+                        alignment: Alignment.bottomRight,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await simpanProduk();
+
+                            showTopSnackBar(
+                                // ignore: use_build_context_synchronously
+                                Overlay.of(context),
+                                const CustomSnackBar.success(
+                                  message: "Berhasil menyimpan produk",
+                                ),
+                                displayDuration: const Duration(seconds: 2),
+                            );
+                          },
+                          style: ButtonStyle(
+                            shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                            foregroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorDark),
+                            elevation: MaterialStateProperty.all(1),
+                            backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
+                            padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
+                          ),
+                          child: const Text('Simpan'),
+                        ),
+                      )
+                    ],
                   )
                 ]
               )
@@ -381,16 +447,15 @@ class _ProdukPageState extends State<ProdukPage> {
                 children: [
                   SizedBox.fromSize(
                     size: const Size(85, 30),
-                    child: DropdownButtonFormField<String>(
+                    child: DropdownButtonFormField<int>(
                       decoration: const InputDecoration.collapsed(hintText: ''),
-                      value: "1",
-                      items: const <DropdownMenuItem<String>>[
-                        DropdownMenuItem(value: "1", child: Text("Page 1")),
-                        DropdownMenuItem(value: "2", child: Text("Page 2")),
-                        DropdownMenuItem(value: "3", child: Text("Page 3")),
-                      ], 
+                      value: _page,
+                      items: _pageList.map((e) => DropdownMenuItem(value: e, child: Text("Page $e"))).toList(), 
                       onChanged: (value) {
-                        
+                        setState(() {
+                          _page = value!;
+                        });
+                        getProduk(reset: false);
                       },
                     ),
                   ),
@@ -406,6 +471,7 @@ class _ProdukPageState extends State<ProdukPage> {
                           setState(() {
                             _showClearButton = false;
                           });
+                          getProduk(reset: true);
                         }, 
                         icon: const Icon(Icons.close_outlined)) : 
                         const Icon(Icons.search_rounded)
