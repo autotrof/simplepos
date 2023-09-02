@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:simplepos/models/pengaturan.dart';
 import 'package:simplepos/models/produk.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart' as sqflite_android;
 import 'package:path_provider/path_provider.dart';
 
 Database? _database;
@@ -19,8 +20,12 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
   if (refresh && kDebugMode) {
     await databaseFactory.deleteDatabase(dbPath);
   }
-
-  var db = await databaseFactory.openDatabase(dbPath);
+  late Database db;
+  if (io.Platform.isAndroid) {
+    db = await sqflite_android.openDatabase(dbPath);
+  } else {
+    db = await databaseFactory.openDatabase(dbPath);
+  }
 
   const sql1 = '''
     CREATE TABLE IF NOT EXISTS produk (
@@ -42,7 +47,7 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
       kode VARCHAR(16) PRIMARY KEY,
       total REAL NOT NULL DEFAULT 0,
       pajak REAL NOT NULL,
-      total_akhir REAL NOT NULL GENERATED ALWAYS AS (total - pajak) STORED,
+      total_akhir REAL NOT NULL,
       is_draft TINYINT(1) NOT NULL DEFAULT 1,
       is_paused TINYINT(1) NOT NULL DEFAULT 0,
       keterangan_paused TEXT NULL,
@@ -60,7 +65,7 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
       urutan INT NOT NULL DEFAULT 1,
       harga REAL NOT NULL,
       jumlah INT NOT NULL,
-      subtotal REAL NOT NULL GENERATED ALWAYS AS (harga * jumlah) STORED,
+      subtotal REAL NOT NULL,
       created_at INT DEFAULT 0,
       updated_at INT DEFAULT 0,
 
@@ -93,7 +98,12 @@ Future<Database> getDatabase() async {
   var databaseFactory = databaseFactoryFfi;
   final io.Directory appDocumentsDir = await getApplicationDocumentsDirectory();
   String dbPath = p.join(appDocumentsDir.path, "databases", _dbName);
-  var db = await databaseFactory.openDatabase(dbPath);
+  Database db;
+  if (io.Platform.isAndroid) {
+    db = await sqflite_android.openDatabase(dbPath);
+  } else {
+    db = await databaseFactory.openDatabase(dbPath);
+  }
   return db;
 }
 

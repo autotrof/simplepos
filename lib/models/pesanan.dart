@@ -13,7 +13,7 @@ class Pesanan extends Model{
   late String kode;
   double total;
   double pajak;
-  double? total_akhir;//generated
+  double total_akhir;
   int? is_draft;
   int? is_paused;
   String? keterangan_paused;
@@ -28,7 +28,7 @@ class Pesanan extends Model{
     return prefix + randomKey;
   }
 
-  Pesanan({this.kode = '', this.total = 0, this.pajak = 0, this.is_draft = 1, this.is_paused = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at, this.total_akhir, this.items, this.keterangan_paused});
+  Pesanan({this.kode = '', this.total = 0, this.pajak = 0, this.is_draft = 1, this.is_paused = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at, this.total_akhir = 0, this.items, this.keterangan_paused});
 
   @override
   Map<String, dynamic> toMap() {
@@ -227,7 +227,6 @@ class Pesanan extends Model{
         kode_pesanan: pesananData["kode_pesanan"], 
         harga: pesananData["harga"], 
         jumlah: pesananData["jumlah"],
-        subtotal: pesananData["subtotal"],
         created_at: pesananData["created_at"],
         updated_at: pesananData["updated_at"],
         produk: dataProdukByKode[pesananData["kode_produk"]]
@@ -258,7 +257,6 @@ class Pesanan extends Model{
               created_at: e['created_at'],
               updated_at: e['updated_at'],
               urutan: e['urutan'],
-              subtotal: e['subtotal'],
             );
 
             Map<String, dynamic> produkMap = produkMaps.firstWhere((element) => element['kode'] == e['kode_produk']);

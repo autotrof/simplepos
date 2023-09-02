@@ -1,13 +1,19 @@
 // import 'package:barcode/barcode.dart';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:bootstrap_grid/bootstrap_grid.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_device_type/flutter_device_type.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:simplepos/globals.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
+import 'package:path/path.dart' as path;
 
 import '../models/produk.dart';
 
@@ -23,24 +29,15 @@ class _ProdukPageState extends State<ProdukPage> {
   late List<String> _sort;
   late int _page;
   late List<int> _pageList;
-
-  late GlobalKey<FormState> _formKey;
   late TextEditingController _cariProdukController;
-  late TextEditingController _inputKodeProdukController;
-  late TextEditingController _inputNamaProdukController;
-  late TextEditingController _inputHargaProdukController;
-  late TextEditingController _inputStokProdukController;
   late bool _showClearButton;
+
+  
 
   @override
   void initState() {
     super.initState();
     _cariProdukController = TextEditingController();
-    _formKey = GlobalKey<FormState>();
-    _inputKodeProdukController = TextEditingController();
-    _inputNamaProdukController = TextEditingController();
-    _inputHargaProdukController = TextEditingController();
-    _inputStokProdukController = TextEditingController();
     _showClearButton = false;
 
     _page = 1;
@@ -48,17 +45,6 @@ class _ProdukPageState extends State<ProdukPage> {
     _sort = ['kode', 'desc'];
     _items = <Produk>[];
     getProduk();
-    _requestPermission();
-  }
-
-  Future<bool> _requestPermission() async {
-    Map<Permission, PermissionStatus> result = await [Permission.storage, Permission.camera].request();
-    debugPrint(result[Permission.storage].toString());
-    debugPrint(result[Permission.camera].toString());
-    if (result[Permission.storage] == PermissionStatus.granted && result[Permission.camera] == PermissionStatus.granted) {
-      return true;
-    }
-    return false;
   }
 
   Future<void> hapusProduk(Produk produk) async {
@@ -80,208 +66,6 @@ class _ProdukPageState extends State<ProdukPage> {
         alertError(context: context, text: deleteResult.toString());
       }
     }
-  }
-
-  Future<void> simpanProduk() async {
-    if (_formKey.currentState!.validate()) {
-      final harga = double.parse(_inputHargaProdukController.text.replaceAll(',', ''));
-      dynamic stok;
-      if (_inputStokProdukController.text.isNotEmpty) {
-        stok = int.parse(_inputStokProdukController.text.replaceAll(',', ''));
-      }
-      try {
-        Produk produk = Produk(kode: _inputKodeProdukController.text, nama: _inputNamaProdukController.text, harga: harga, stok: stok);
-        await produk.save();
-        getProduk();
-        _inputKodeProdukController.clear();
-        _inputNamaProdukController.clear();
-        _inputHargaProdukController.clear();
-        _inputStokProdukController.clear();
-      } catch (e) {
-        // ignore: use_build_context_synchronously
-        alertError(context: context, text: "Gagal menyimpan produk : ${e.toString()}");
-      }
-    }
-  }
-
-  void showModalProduk({String type = 'create', Produk? produk}) {
-    _inputKodeProdukController.text = '';
-    _inputNamaProdukController.text = '';
-    _inputHargaProdukController.text = '';
-    _inputStokProdukController.text = '';
-    if (type == 'edit') {
-      _inputKodeProdukController.text = produk!.kode;
-      _inputNamaProdukController.text = produk.nama;
-      _inputHargaProdukController.text = produk.harga.toString();
-      if (produk.stok != null) {
-        _inputStokProdukController.text = produk.stok.toString();
-      }
-    }
-
-    showModalBottomSheet(context: context, builder: (BuildContext ctx) {
-      Future<File?> getImage(ImageSource source) async {
-          final bool isGranted = await _requestPermission();
-          if (!isGranted) {
-            return null;
-          }
-          final ImagePicker picker = ImagePicker();
-          final XFile? image = await picker.pickImage(source: source);
-          if (image != null) {
-            return File(image.path);
-          }
-          return null;
-      }
-
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 50),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Form(
-              key: _formKey, child: Wrap(
-                children: [
-                  Container(
-                    alignment: Alignment.topCenter,
-                    margin: const EdgeInsets.only(bottom: 20), 
-                    child: const Text('Form Produk', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'barlow', fontWeight: FontWeight.w500, fontSize: 24))
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 15), 
-                    child: TextFormField(
-                    decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      labelText: 'Kode',
-                      suffixIcon: GestureDetector(onTap: () => _inputKodeProdukController.clear(), child: const Icon(Icons.clear)),
-                      hintText: 'Kode Produk',
-                    ),
-                    controller: _inputKodeProdukController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Kode tidak boleh kosong';
-                      }
-                      return null;
-                    }
-                  )),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 15), 
-                    child: TextFormField(
-                    decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      labelText: 'Nama Produk',
-                      suffixIcon: GestureDetector(onTap: () => _inputNamaProdukController.clear(), child: const Icon(Icons.clear)),
-                      hintText: 'Nama Produk',
-                    ),
-                    controller: _inputNamaProdukController,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Nama tidak boleh kosong';
-                      }
-                      return null;
-                    }
-                  )),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 15), 
-                    child: TextFormField(
-                    decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      labelText: 'Harga',
-                      suffixIcon: GestureDetector(onTap: () => _inputHargaProdukController.clear(), child: const Icon(Icons.clear)),
-                      hintText: 'Harga Produk',
-                    ),
-                    controller: _inputHargaProdukController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [ThousandsSeparatorInputFormatter()],
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Harga tidak boleh kosong';
-                      }
-                      return null;
-                    }
-                  )),
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 15), 
-                    child: TextFormField(
-                    decoration: InputDecoration(
-                      border: const OutlineInputBorder(),
-                      labelText: 'Stok',
-                      suffixIcon: GestureDetector(onTap: () => _inputStokProdukController.clear(), child: const Icon(Icons.clear)),
-                      hintText: 'Stok Produk',
-                    ),
-                    controller: _inputStokProdukController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [ThousandsSeparatorInputFormatter()],
-                  )),
-                  Row(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          showDialog(context: context, builder: (BuildContext ctx) {
-                            return AlertDialog(
-                              title: const Text("Pilih Gambar Dari"),
-                              content: Row(
-                                children: [
-                                  TextButton(onPressed: () async {
-                                    await getImage(ImageSource.camera);
-                                    Navigator.pop(ctx);
-                                  }, child: const Text("Kamera")),
-                                  const Expanded(child: Row()),
-                                  TextButton(onPressed: () async {
-                                    await getImage(ImageSource.gallery);
-                                    Navigator.pop(ctx);
-                                  }, child: const Text("Galeri")),
-                                ],
-                              )
-                            );
-                          });
-                        },
-                        style: ButtonStyle(
-                          shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                          foregroundColor: MaterialStatePropertyAll(Colors.green[800]),
-                          elevation: MaterialStateProperty.all(1),
-                          backgroundColor: const MaterialStatePropertyAll(Colors.greenAccent),
-                          padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
-                        ),
-                        child: const Text('Pilih Gambar'),
-                      ),
-                      const Expanded(
-                        child: Row()
-                      ),
-                      Container(
-                        alignment: Alignment.bottomRight,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await simpanProduk();
-
-                            showTopSnackBar(
-                                // ignore: use_build_context_synchronously
-                                Overlay.of(context),
-                                const CustomSnackBar.success(
-                                  message: "Berhasil menyimpan produk",
-                                ),
-                                displayDuration: const Duration(seconds: 2),
-                            );
-                          },
-                          style: ButtonStyle(
-                            shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                            foregroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorDark),
-                            elevation: MaterialStateProperty.all(1),
-                            backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
-                            padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
-                          ),
-                          child: const Text('Simpan'),
-                        ),
-                      )
-                    ],
-                  )
-                ]
-              )
-            ),
-          ),
-        )
-      );
-    });
   }
 
   void getProduk({bool reset = false}) async {
@@ -347,90 +131,85 @@ class _ProdukPageState extends State<ProdukPage> {
 
   @override
   Widget build(BuildContext context) {
-    /* List<TableRow> tableBody = [];
-    if (_items.isNotEmpty) {
-      for (Produk produk in _items) {
-        tableBody.add(
-          TableRow(
-            decoration: const BoxDecoration(color: Colors.white),
-            children: [
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: SvgPicture.string(height: 50, Barcode.code128().toSvg(produk.kode))),
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.kode)),
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(produk.nama)),
-              Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text("Rp ${formatter.format(produk.harga.ceil())}")),
-              (
-                produk.stok.toString() == 'null' ? 
-                Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: const Text("∞", style: TextStyle(color: Colors.green)))
-                :
-                Container(decoration: const BoxDecoration(color: Colors.white), padding: const EdgeInsets.all(10), child: Text(formatter.format(produk.stok).toString()))
+    ListView tampilanHp = ListView(
+      children: _items.asMap().entries.map((e){
+        return Column(
+          children: [
+            GestureDetector(
+              onTap: () => showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) => ModalProduk(
+                  produk: e.value,
+                  onDone: (Produk? produkDataResult) {
+                    if (produkDataResult != null) {
+                      showTopSnackBar(
+                        // ignore: use_build_context_synchronously
+                        Overlay.of(context),
+                        const CustomSnackBar.success(
+                          message: "Berhasil menyimpan produk",
+                        ),
+                        displayDuration: const Duration(seconds: 2),
+                      );
+                      getProduk(reset: false);
+                    }
+                  }
+                )
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
-                      backgroundColor: Theme.of(context).primaryColorLight
+              child: Container(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black12))),
+                child: Row(
+                  children: [
+                    Container(
+                      clipBehavior: Clip.antiAlias,
+                      width: 50,
+                      height: 50,
+                      margin: const EdgeInsets.only(right: 10),
+                      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(50), border: Border.all(color: Colors.black12)),
+                      child: e.value.gambar != null ? Image.file(File(e.value.gambar!), alignment: Alignment.center, isAntiAlias: true) : const Icon(Icons.image, color: Colors.black45),
                     ),
-                    onPressed: () => showModalProduk(type: 'edit', produk: produk), 
-                    child: const Text("Edit")
-                  ),
-                  const Padding(padding: EdgeInsets.all(5), child: SizedBox.shrink()),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(5))),
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.red[50]
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(e.value.nama, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 17))),
+                          Text("Sisa : ${e.value.stok ?? 'UNLIMITED'}", style: const TextStyle(color: Colors.black87)),
+                        ]
+                      )
                     ),
-                    onPressed: () => hapusProduk(produk), 
-                    child: const Text("Hapus")
-                  )
-                ],
+                    Text(formatter.format(e.value.harga), style: const TextStyle(fontWeight: FontWeight.w500),)
+                  ],
+                ),
               ),
-            ]
-          )
+            ),
+            e.key == _items.length - 1 ? const Padding(padding: EdgeInsets.only(bottom: 80)) : const SizedBox.shrink()
+          ],
+        );
+      }).toList(),
+    );
+
+    SingleChildScrollView tampilanTablet() { 
+      const jumlahKolom = 3;
+      for (int i = 0; i < _items.length; i+=3) {
+        Row row = Row(
+          children: [
+            Text(_items[i].nama),
+            Text(_items[i+1].nama),
+            Text(_items[i+2].nama),
+          ],
         );
       }
-    } else {
-      tableBody.add(
-        TableRow(
-          decoration: const BoxDecoration(color: Colors.white),
-          children: [
-            Container(
-              decoration: const BoxDecoration(color: Colors.white), 
-              padding: const EdgeInsets.all(10), 
-              child: const Text("Data tidak ditemukan")
-            ),
-            Container(
-              decoration: const BoxDecoration(color: Colors.white), 
-              padding: const EdgeInsets.all(10), 
-              child: const Text("Data tidak ditemukan")
-            ),
-            Container(
-              decoration: const BoxDecoration(color: Colors.white), 
-              padding: const EdgeInsets.all(10), 
-              child: const Text("Data tidak ditemukan")
-            ),
-            Container(
-              decoration: const BoxDecoration(color: Colors.white), 
-              padding: const EdgeInsets.all(10), 
-              child: const Text("Data tidak ditemukan")
-            ),
-            Container(
-              decoration: const BoxDecoration(color: Colors.white), 
-              padding: const EdgeInsets.all(10), 
-              child: const Text("Data tidak ditemukan")
-            ),
-            Container(
-              decoration: const BoxDecoration(color: Colors.white), 
-              padding: const EdgeInsets.all(10), 
-              child: const Text("Data tidak ditemukan")
-            )
-          ]
+      return SingleChildScrollView(
+        child: Row(
+          children: [],
         )
       );
-    } */
-    
+    }
+
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(color: Colors.grey[200]),
@@ -491,35 +270,11 @@ class _ProdukPageState extends State<ProdukPage> {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(top: 12), 
-                child: ListView(
-                  children: _items.map((e) => Container(
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.all(10),
-                    decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black12))),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          margin: const EdgeInsets.only(right: 10),
-                          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(50), border: Border.all(color: Colors.black12)),
-                          child: const Icon(Icons.image, color: Colors.black45),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(e.nama, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 17))),
-                              Text("Sisa : ${e.stok ?? 'UNLIMITED'}", style: const TextStyle(color: Colors.black87)),
-                            ]
-                          )
-                        ),
-                        Text(formatter.format(e.harga), style: const TextStyle(fontWeight: FontWeight.w500),)
-                      ],
-                    ),
-                  )).toList(),
+                padding: const EdgeInsets.only(top: 12),
+                child: (
+                  Device.get().isTablet ? 
+                  tampilanTablet :
+                  tampilanHp
                 )
               )
             ),
@@ -527,9 +282,394 @@ class _ProdukPageState extends State<ProdukPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showModalProduk(type: 'create'), 
+        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, builder: (context) => ModalProduk(onDone: (Produk? produkDataResult) {
+          if (produkDataResult != null) {
+            showTopSnackBar(
+              // ignore: use_build_context_synchronously
+              Overlay.of(context),
+              const CustomSnackBar.success(
+                message: "Berhasil menyimpan produk",
+              ),
+              displayDuration: const Duration(seconds: 2),
+            );
+            getProduk(reset: true);
+          }
+        })),
         label: const Row(children: [Icon(Icons.add), Text("Tambah Produk Baru")])
       ),
     );
+  }
+}
+
+class ModalProduk extends StatefulWidget {
+  final Produk? produk;
+  final Function? onDone;
+  const ModalProduk({super.key, this.produk, this.onDone});
+
+  @override
+  State<ModalProduk> createState() => _ModalProdukState();
+}
+
+class _ModalProdukState extends State<ModalProduk> {
+  late GlobalKey<FormState> _formKey;
+  late TextEditingController _inputKodeProdukController;
+  late TextEditingController _inputNamaProdukController;
+  late TextEditingController _inputHargaProdukController;
+  late TextEditingController _inputStokProdukController;
+  File? _gambar;
+
+  @override
+  void initState() {
+    super.initState();
+    _formKey = GlobalKey<FormState>();
+    _inputKodeProdukController = TextEditingController();
+    _inputNamaProdukController = TextEditingController();
+    _inputHargaProdukController = TextEditingController();
+    _inputStokProdukController = TextEditingController();
+    _requestPermission();
+
+    _inputKodeProdukController.text = '';
+    _inputNamaProdukController.text = '';
+    _inputHargaProdukController.text = '';
+    _inputStokProdukController.text = '';
+    if (widget.produk != null) {
+      _inputKodeProdukController.text = widget.produk!.kode;
+      _inputNamaProdukController.text = widget.produk!.nama;
+      _inputHargaProdukController.text = widget.produk!.harga.toString();
+      if (widget.produk?.stok != null) {
+        _inputStokProdukController.text = widget.produk!.stok.toString();
+      }
+      if (widget.produk?.gambar != null) {
+        _gambar = File(widget.produk!.gambar!);
+      }
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Padding(padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 50),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Form(
+          key: _formKey, 
+          child: Wrap(
+            children: [
+              Container(
+                alignment: Alignment.topCenter,
+                margin: const EdgeInsets.only(bottom: 20), 
+                child: const Text('Form Produk', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'barlow', fontWeight: FontWeight.w500, fontSize: 24))
+              ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 15),
+
+              ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 15), 
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    labelText: 'Kode',
+                    suffixIcon: GestureDetector(onTap: () => _inputKodeProdukController.clear(), child: const Icon(Icons.clear)),
+                    hintText: 'Kode Produk',
+                  ),
+                  controller: _inputKodeProdukController,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Kode tidak boleh kosong';
+                    }
+                    return null;
+                  }
+                )
+              ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 15), 
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    labelText: 'Nama Produk',
+                    suffixIcon: GestureDetector(onTap: () => _inputNamaProdukController.clear(), child: const Icon(Icons.clear)),
+                    hintText: 'Nama Produk',
+                  ),
+                  controller: _inputNamaProdukController,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Nama tidak boleh kosong';
+                    }
+                    return null;
+                  }
+                )
+              ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 15), 
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    labelText: 'Harga',
+                    suffixIcon: GestureDetector(onTap: () => _inputHargaProdukController.clear(), child: const Icon(Icons.clear)),
+                    hintText: 'Harga Produk',
+                  ),
+                  controller: _inputHargaProdukController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsSeparatorInputFormatter()],
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Harga tidak boleh kosong';
+                    }
+                    return null;
+                  }
+                )
+              ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 15), 
+                child: TextFormField(
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    labelText: 'Stok',
+                    suffixIcon: GestureDetector(onTap: () => _inputStokProdukController.clear(), child: const Icon(Icons.clear)),
+                    hintText: 'Stok Produk',
+                  ),
+                  controller: _inputStokProdukController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsSeparatorInputFormatter()],
+                )
+              ),
+              Row(
+                children: [
+                  (
+                    _gambar != null ?
+                    Padding(padding: const EdgeInsets.only(right: 10), child: Container(
+                      width: 90,
+                      height: 90,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+                      child: Image.file(_gambar!, height: 90, width: 90, isAntiAlias: true)
+                    ))
+                    :
+                    const SizedBox.shrink()
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _gambar != null ? 
+                      ElevatedButton(
+                        onPressed: () {
+                          showDialog(context: context, builder: (BuildContext ctx) {
+                            return AlertDialog(
+                              title: const Text("Anda yakin akan menghapus gambar produk ini ?"),
+                              content: Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _gambar = null;
+                                      });
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text("Ya Hapus")
+                                  ),
+                                  const Expanded(child: Row()),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                    }, 
+                                    child: const Text("Batal")
+                                  ),
+                                ],
+                              )
+                            );
+                          });
+                        },
+                        style: ButtonStyle(
+                          shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+                          foregroundColor: MaterialStatePropertyAll(Colors.red[800]),
+                          elevation: MaterialStateProperty.all(1),
+                          backgroundColor: MaterialStatePropertyAll(Colors.red[50]),
+                          padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
+                        ),
+                        child: const Text('Hapus Gambar'),
+                      ) : const SizedBox.shrink(),
+                      ElevatedButton(
+                        onPressed: () {
+                          processImage();
+                        },
+                        style: ButtonStyle(
+                          shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+                          foregroundColor: MaterialStatePropertyAll(Colors.green[800]),
+                          elevation: MaterialStateProperty.all(1),
+                          backgroundColor: MaterialStatePropertyAll(Colors.green[100]),
+                          padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
+                        ),
+                        child: Text(_gambar == null ? 'Pilih Gambar' : 'Ganti Gambar'),
+                      )
+                    ],
+                  )
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.only(top: 15),
+                alignment: Alignment.bottomRight,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await simpanProduk();
+                  },
+                  style: ButtonStyle(
+                    shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+                    foregroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorDark),
+                    elevation: MaterialStateProperty.all(1),
+                    backgroundColor: MaterialStatePropertyAll(Theme.of(context).primaryColorLight),
+                    padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20)),
+                    fixedSize: MaterialStatePropertyAll(Size(MediaQuery.of(context).size.width, 50))
+                  ),
+                  child: const Text('Simpan'),
+                ),
+              )
+            ]
+          )
+        ),
+      )
+    ));
+  }
+
+  Future<bool> _requestPermission() async {
+    Map<Permission, PermissionStatus> result = await [Permission.storage, Permission.camera].request();
+    debugPrint(result[Permission.storage].toString());
+    debugPrint(result[Permission.camera].toString());
+    if (result[Permission.storage] == PermissionStatus.granted && result[Permission.camera] == PermissionStatus.granted) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> simpanProduk() async {
+    if (_formKey.currentState!.validate()) {
+      final harga = double.parse(_inputHargaProdukController.text.replaceAll(',', ''));
+      dynamic stok;
+      if (_inputStokProdukController.text.isNotEmpty) {
+        stok = int.parse(_inputStokProdukController.text.replaceAll(',', ''));
+      }
+      try {
+        Produk produk = Produk(
+          kode: _inputKodeProdukController.text, 
+          nama: _inputNamaProdukController.text, 
+          harga: harga, 
+          stok: stok,
+          gambar: _gambar?.path
+        );
+        await produk.save();
+        _inputKodeProdukController.clear();
+        _inputNamaProdukController.clear();
+        _inputHargaProdukController.clear();
+        _inputStokProdukController.clear();
+
+        if (widget.onDone != null) {
+          widget.onDone!(produk);
+        }
+        // ignore: use_build_context_synchronously
+        Navigator.pop(context);
+      } catch (e) {
+        // ignore: use_build_context_synchronously
+        alertError(context: context, text: "Gagal menyimpan produk : ${e.toString()}");
+      }
+    }
+  }
+
+  Future<File?> getImage(ImageSource source) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+    if (image != null) {
+      return File(image.path);
+    }
+    return null;
+  }
+
+  Future<String?> cropImage(String imagePath) async {
+    const title = "Sesuaikan Gambar";
+    ImageCropper imageCropper = ImageCropper();
+    File? croppedfile = await imageCropper.cropImage(
+      sourcePath: imagePath,
+      aspectRatio: const CropAspectRatio(ratioX: 400, ratioY: 400),
+      aspectRatioPresets: [
+        CropAspectRatioPreset.square
+      ],
+      androidUiSettings: AndroidUiSettings(
+        toolbarTitle: title,
+        toolbarColor: Theme.of(context).primaryColor,
+        toolbarWidgetColor: Colors.white,
+        initAspectRatio: CropAspectRatioPreset.square,
+        lockAspectRatio: true,
+      ),
+      iosUiSettings: const IOSUiSettings(
+        minimumAspectRatio: 1.0,
+        aspectRatioLockEnabled: true,
+        resetAspectRatioEnabled: true,
+        title: title,
+        cancelButtonTitle: "Batal",
+        doneButtonTitle: "Simpan",
+        showCancelConfirmationDialog: true
+      )
+    );
+
+    if (croppedfile != null) {
+      Uint8List bytes = await croppedfile.readAsBytes();
+      Directory documentsDirectory = await getApplicationDocumentsDirectory();
+      String newImagePath = path.join(documentsDirectory.path, "${DateTime.now().millisecondsSinceEpoch}${randomString(3).toUpperCase()}.jpg");
+      File file = File(newImagePath);
+      await file.writeAsBytes(bytes);
+      return newImagePath;
+    }
+    return null;
+  }
+
+  Future<void> processImage() async {
+    if (Platform.isAndroid || Platform.isIOS) {
+      showDialog(context: context, builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: const Text("Pilih Gambar Dari"),
+          content: Row(
+            children: [
+              TextButton(onPressed: () async {
+                File? image = await getImage(ImageSource.camera);
+                if (image != null) {
+                  // ignore: use_build_context_synchronously
+                  Navigator.pop(ctx);
+                  String? imagePath = await cropImage(image.path);
+                  if (imagePath != null) {
+                    setState(() {
+                      _gambar = File(imagePath);
+                    });
+                  }
+                }
+              }, child: const Text("Kamera")),
+              const Expanded(child: Row()),
+              TextButton(onPressed: () async {
+                File? image = await getImage(ImageSource.gallery);
+                if (image != null) {
+                  // ignore: use_build_context_synchronously
+                  Navigator.pop(ctx);
+                  String? imagePath = await cropImage(image.path);
+                  if (imagePath != null) {
+                    setState(() {
+                      _gambar = File(imagePath);
+                    });
+                  }
+                }
+              }, child: const Text("Galeri")),
+            ],
+          )
+        );
+      });
+    } else {
+      File? image = await getImage(ImageSource.gallery);
+      if (image != null) {
+        String? imagePath = await cropImage(image.path);
+        if (imagePath != null) {
+          setState(() {
+            _gambar = File(imagePath);
+          });
+        }
+      }
+    }
   }
 }

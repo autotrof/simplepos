@@ -14,7 +14,7 @@ class PesananItem extends Model{
   int urutan;
   double harga;
   int jumlah;
-  double? subtotal;//generated
+  late double subtotal;
   int created_at;
   int updated_at;
   Pesanan? pesanan;
@@ -28,9 +28,10 @@ class PesananItem extends Model{
     required this.jumlah, 
     this.created_at = 0, 
     this.updated_at = 0, 
-    this.subtotal,
     this.produk
-  });
+  }) {
+    subtotal = harga * jumlah;
+  }
 
   @override
   Map<String, dynamic> toMap() {
@@ -101,11 +102,10 @@ class PesananItem extends Model{
     String kode_produk = res.current['kode_produk'].toString();
     int jumlah = int.parse(res.current['jumlah'].toString());
     double harga = double.parse(res.current['harga'].toString());
-    double subtotal = double.parse(res.current['subtotal'].toString());
     int created_at = int.parse(res.current['created_at'].toString());
     int updated_at = int.parse(res.current['updated_at'].toString());
     await res.close();
-    return PesananItem(kode_produk: kode_produk, kode_pesanan: kode_pesanan, harga: harga, jumlah: jumlah, subtotal: subtotal, created_at: created_at, updated_at: updated_at);
+    return PesananItem(kode_produk: kode_produk, kode_pesanan: kode_pesanan, harga: harga, jumlah: jumlah, created_at: created_at, updated_at: updated_at);
   }
 
   @override

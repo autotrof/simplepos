@@ -39,6 +39,7 @@ dependencies:
   path:
   quickalert:
   path_provider: ^2.1.0
+  sqflite:
   sqflite_common_ffi:
   flutter_svg:
   barcode:
@@ -48,9 +49,9 @@ dependencies:
   nanoid: ^1.0.0
   flutter_jailbreak_detection:
   image_picker: ^0.8.4+4
-  image_cropper: ^1.4.1
+  image_cropper:
   permission_handler:
-  image_gallery_saver: ^1.7.1
+  flutter_device_type:
 
 dev_dependencies:
   flutter_test:
