@@ -2,7 +2,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:bootstrap_grid/bootstrap_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_device_type/flutter_device_type.dart';
 import 'package:flutter_svg/svg.dart';
@@ -31,8 +30,6 @@ class _ProdukPageState extends State<ProdukPage> {
   late List<int> _pageList;
   late TextEditingController _cariProdukController;
   late bool _showClearButton;
-
-  
 
   @override
   void initState() {
@@ -72,7 +69,7 @@ class _ProdukPageState extends State<ProdukPage> {
     if (reset) {
       _page = 1;
     }
-    Map<String, dynamic> produkData = await Produk.get(search: _cariProdukController.text, sort: _sort, page: _page);
+    Map<String, dynamic> produkData = await Produk.get(search: _cariProdukController.text, sort: _sort, page: _page, limit: Device.get().isTablet ? 100 : 50);
     _items = produkData["produkList"];
     _pageList.clear();
     for (int i = 1; i <= produkData["totalPage"]; i++) {
@@ -129,86 +126,99 @@ class _ProdukPageState extends State<ProdukPage> {
     );
   }
 
+  void showModalProduk({Produk? produk}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => ModalProduk(
+        produk: produk,
+        onDone: (Produk? produkDataResult) {
+          if (produkDataResult != null) {
+            showTopSnackBar(
+              // ignore: use_build_context_synchronously
+              Overlay.of(context),
+              const CustomSnackBar.success(
+                message: "Berhasil menyimpan produk",
+              ),
+              displayDuration: const Duration(seconds: 2),
+            );
+            getProduk(reset: false);
+          }
+        }
+      )
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    ListView tampilanHp = ListView(
-      children: _items.asMap().entries.map((e){
-        return Column(
-          children: [
-            GestureDetector(
-              onTap: () => showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => ModalProduk(
-                  produk: e.value,
-                  onDone: (Produk? produkDataResult) {
-                    if (produkDataResult != null) {
-                      showTopSnackBar(
-                        // ignore: use_build_context_synchronously
-                        Overlay.of(context),
-                        const CustomSnackBar.success(
-                          message: "Berhasil menyimpan produk",
-                        ),
-                        displayDuration: const Duration(seconds: 2),
-                      );
-                      getProduk(reset: false);
-                    }
-                  }
-                )
-              ),
-              child: Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black12))),
-                child: Row(
-                  children: [
-                    Container(
-                      clipBehavior: Clip.antiAlias,
-                      width: 50,
-                      height: 50,
-                      margin: const EdgeInsets.only(right: 10),
-                      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(50), border: Border.all(color: Colors.black12)),
-                      child: e.value.gambar != null ? Image.file(File(e.value.gambar!), alignment: Alignment.center, isAntiAlias: true) : const Icon(Icons.image, color: Colors.black45),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(e.value.nama, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 17))),
-                          Text("Sisa : ${e.value.stok ?? 'UNLIMITED'}", style: const TextStyle(color: Colors.black87)),
-                        ]
-                      )
-                    ),
-                    Text(formatter.format(e.value.harga), style: const TextStyle(fontWeight: FontWeight.w500),)
-                  ],
+    late Widget tampilan;
+    const chunkSize = 6;
+    if (Device.get().isTablet) {
+      List<List<dynamic>> itemsChunked = chunk(_items, chunkSize);
+      tampilan = Expanded(
+        child: SingleChildScrollView(
+          child: Column(
+            children: itemsChunked.asMap().entries.map((list) => Row(
+              children: list.value.asMap().entries.map((e) => Expanded(child: Padding(padding: const EdgeInsets.all(4), child: GestureDetector(
+                onTap: () => showModalProduk(produk: e.value), 
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: Colors.black54, width: 0.5)),
+                  child: Column(children: [
+                    Container(child: e.value.gambar != null ? Image.file(File(e.value.gambar!), height: 80, alignment: Alignment.center, isAntiAlias: true) : const Icon(Icons.image, color: Colors.black45, size: 80)),
+                    Text(e.value.nama, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                    Text(e.value.stok != null ? "Stok: ${formatter.format(e.value.stok)}" : "Stok: UNLIMITED", style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 15)),
+                    
+                  ]),
+                ))
+              ))).toList(),
+            )).toList(),
+          ),
+        ),
+      );
+    } else {
+      tampilan = ListView(
+        children: _items.asMap().entries.map((e){
+          return Column(
+            children: [
+              GestureDetector(
+                onTap: () => showModalProduk(produk: e.value),
+                child: Container(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black12))),
+                  child: Row(
+                    children: [
+                      Container(
+                        clipBehavior: Clip.antiAlias,
+                        width: 50,
+                        height: 50,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(50), border: Border.all(color: Colors.black12)),
+                        child: e.value.gambar != null ? Image.file(File(e.value.gambar!), alignment: Alignment.center, isAntiAlias: true) : const Icon(Icons.image, color: Colors.black45),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(e.value.nama, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 17))),
+                            Text("Sisa : ${e.value.stok ?? 'UNLIMITED'}", style: const TextStyle(color: Colors.black87)),
+                          ]
+                        )
+                      ),
+                      Text(formatter.format(e.value.harga), style: const TextStyle(fontWeight: FontWeight.w500),)
+                    ],
+                  ),
                 ),
               ),
-            ),
-            e.key == _items.length - 1 ? const Padding(padding: EdgeInsets.only(bottom: 80)) : const SizedBox.shrink()
-          ],
-        );
-      }).toList(),
-    );
-
-    SingleChildScrollView tampilanTablet() { 
-      const jumlahKolom = 3;
-      for (int i = 0; i < _items.length; i+=3) {
-        Row row = Row(
-          children: [
-            Text(_items[i].nama),
-            Text(_items[i+1].nama),
-            Text(_items[i+2].nama),
-          ],
-        );
-      }
-      return SingleChildScrollView(
-        child: Row(
-          children: [],
-        )
+              e.key == _items.length - 1 ? const Padding(padding: EdgeInsets.only(bottom: 80)) : const SizedBox.shrink()
+            ],
+          );
+        }).toList(),
       );
     }
-
 
     return Scaffold(
       body: Container(
@@ -239,6 +249,9 @@ class _ProdukPageState extends State<ProdukPage> {
                     ),
                   ),
                   Expanded(child: TextFormField(
+                    autocorrect: false,
+                    autofocus: false,
+                    keyboardType: TextInputType.streetAddress,
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       labelText: 'Cari Produk',
@@ -271,11 +284,7 @@ class _ProdukPageState extends State<ProdukPage> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: (
-                  Device.get().isTablet ? 
-                  tampilanTablet :
-                  tampilanHp
-                )
+                child: tampilan
               )
             ),
           ]
@@ -317,6 +326,8 @@ class _ModalProdukState extends State<ModalProduk> {
   late TextEditingController _inputHargaProdukController;
   late TextEditingController _inputStokProdukController;
   File? _gambar;
+  bool _permissionCamera = false;
+  bool _permissionStorage = false;
 
   @override
   void initState() {
@@ -351,7 +362,7 @@ class _ModalProdukState extends State<ModalProduk> {
       width: double.infinity,
       padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 50),
       child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         child: Form(
           key: _formKey, 
           child: Wrap(
@@ -368,6 +379,8 @@ class _ModalProdukState extends State<ModalProduk> {
               Container(
                 margin: const EdgeInsets.only(bottom: 15), 
                 child: TextFormField(
+                  autocorrect: false,
+                  autofocus: false,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     labelText: 'Kode',
@@ -386,6 +399,8 @@ class _ModalProdukState extends State<ModalProduk> {
               Container(
                 margin: const EdgeInsets.only(bottom: 15), 
                 child: TextFormField(
+                  autocorrect: false,
+                  autofocus: false,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     labelText: 'Nama Produk',
@@ -404,6 +419,8 @@ class _ModalProdukState extends State<ModalProduk> {
               Container(
                 margin: const EdgeInsets.only(bottom: 15), 
                 child: TextFormField(
+                  autocorrect: false,
+                  autofocus: false,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     labelText: 'Harga',
@@ -424,6 +441,8 @@ class _ModalProdukState extends State<ModalProduk> {
               Container(
                 margin: const EdgeInsets.only(bottom: 15), 
                 child: TextFormField(
+                  autocorrect: false,
+                  autofocus: false,
                   decoration: InputDecoration(
                     border: const OutlineInputBorder(),
                     labelText: 'Stok',
@@ -490,6 +509,7 @@ class _ModalProdukState extends State<ModalProduk> {
                         ),
                         child: const Text('Hapus Gambar'),
                       ) : const SizedBox.shrink(),
+                      _permissionCamera || _permissionStorage ? 
                       ElevatedButton(
                         onPressed: () {
                           processImage();
@@ -503,6 +523,8 @@ class _ModalProdukState extends State<ModalProduk> {
                         ),
                         child: Text(_gambar == null ? 'Pilih Gambar' : 'Ganti Gambar'),
                       )
+                      : 
+                      const SizedBox.shrink()
                     ],
                   )
                 ],
@@ -532,14 +554,12 @@ class _ModalProdukState extends State<ModalProduk> {
     ));
   }
 
-  Future<bool> _requestPermission() async {
+  Future<void> _requestPermission() async {
     Map<Permission, PermissionStatus> result = await [Permission.storage, Permission.camera].request();
-    debugPrint(result[Permission.storage].toString());
-    debugPrint(result[Permission.camera].toString());
-    if (result[Permission.storage] == PermissionStatus.granted && result[Permission.camera] == PermissionStatus.granted) {
-      return true;
-    }
-    return false;
+    setState(() {
+      _permissionStorage = result[Permission.storage] == PermissionStatus.granted;
+      _permissionCamera = result[Permission.camera] == PermissionStatus.granted;
+    });
   }
 
   Future<void> simpanProduk() async {
@@ -623,7 +643,7 @@ class _ModalProdukState extends State<ModalProduk> {
   }
 
   Future<void> processImage() async {
-    if (Platform.isAndroid || Platform.isIOS) {
+    if ((Platform.isAndroid || Platform.isIOS) && _permissionCamera && _permissionStorage) {
       showDialog(context: context, builder: (BuildContext ctx) {
         return AlertDialog(
           title: const Text("Pilih Gambar Dari"),
@@ -661,7 +681,12 @@ class _ModalProdukState extends State<ModalProduk> {
         );
       });
     } else {
-      File? image = await getImage(ImageSource.gallery);
+      File? image;
+      if (_permissionStorage) {
+        image = await getImage(ImageSource.gallery);
+      } else if (_permissionCamera) {
+        image = await getImage(ImageSource.camera);
+      }
       if (image != null) {
         String? imagePath = await cropImage(image.path);
         if (imagePath != null) {

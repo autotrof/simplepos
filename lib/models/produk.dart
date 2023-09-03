@@ -1,5 +1,4 @@
 // ignore_for_file: non_constant_identifier_names
-import 'package:flutter/foundation.dart';
 import 'package:nanoid/async.dart';
 import 'package:simplepos/models/model.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -38,6 +37,7 @@ class Produk extends Model{
       'aktif': aktif,
       'created_at': created_at,
       'updated_at': updated_at,
+      'deleted_at': deleted_at,
     };
   }
 
@@ -61,7 +61,7 @@ class Produk extends Model{
       gambar: data["gambar"],
       aktif: data["aktif"],
       created_at: data["created_at"],
-      updated_at: data["updated_at"]
+      updated_at: data["updated_at"],
     );
     p.kode = data["kode"];
     p.deleted_at = data["deleted_at"];
@@ -79,7 +79,9 @@ class Produk extends Model{
     if (kode == '') {
       kode = await generateKode();
     }
-    await db.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.transaction((txn) async {
+      await txn.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    });
     return this;
   }
 
@@ -159,7 +161,6 @@ class Produk extends Model{
       }
     }
 
-    debugPrint("GET");
     return {
       "totalData": result[0]["total"],
       "totalPage": totalPage,

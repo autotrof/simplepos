@@ -124,3 +124,14 @@ String randomString(int length) {
   final randomString = List.generate(length, (index) => availableChars[random.nextInt(availableChars.length)]).join();
   return randomString;
 }
+
+List<List<dynamic>> chunk(List<dynamic> array, int size) {
+  List<List<dynamic>> chunks = [];
+  int i = 0;
+  while (i < array.length) {
+    int j = i + size;
+    chunks.add(array.sublist(i, j > array.length ? array.length : j));
+    i = j;
+  }
+  return chunks;
+}
