@@ -2,17 +2,17 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:crop_image/crop_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_device_type/flutter_device_type.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:image_cropper/image_cropper.dart';
+import 'dart:ui' as ui;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:simplepos/globals.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
-import 'package:path/path.dart' as path;
 
 import '../models/produk.dart';
 
@@ -146,35 +146,40 @@ class _ProdukPageState extends State<ProdukPage> {
           }
         }
       )
-    );
+    ).whenComplete(() {
+      FocusManager.instance.primaryFocus?.unfocus();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     late Widget tampilan;
-    const chunkSize = 6;
+    const chunkSize = 5;
+    List columns = <int>[];
+    for (int i = 0; i < chunkSize; i++) {
+      columns.add(i);
+    }
     if (Device.get().isTablet) {
       List<List<dynamic>> itemsChunked = chunk(_items, chunkSize);
-      tampilan = Expanded(
-        child: SingleChildScrollView(
-          child: Column(
-            children: itemsChunked.asMap().entries.map((list) => Row(
-              children: list.value.asMap().entries.map((e) => Expanded(child: Padding(padding: const EdgeInsets.all(4), child: GestureDetector(
-                onTap: () => showModalProduk(produk: e.value), 
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: Colors.black54, width: 0.5)),
-                  child: Column(children: [
-                    Container(child: e.value.gambar != null ? Image.file(File(e.value.gambar!), height: 80, alignment: Alignment.center, isAntiAlias: true) : const Icon(Icons.image, color: Colors.black45, size: 80)),
-                    Text(e.value.nama, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
-                    Text(e.value.stok != null ? "Stok: ${formatter.format(e.value.stok)}" : "Stok: UNLIMITED", style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 15)),
-                    
-                  ]),
-                ))
-              ))).toList(),
-            )).toList(),
-          ),
+      tampilan = SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 90),
+        child: Column(
+          children: itemsChunked.asMap().entries.map((list) => Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: columns.map((e) => list.value.asMap().containsKey(e) ? Expanded(child: Padding(padding: const EdgeInsets.all(4), child: GestureDetector(
+              onTap: () => showModalProduk(produk: list.value[e]), 
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: Colors.black54, width: 0.5)),
+                child: Column(children: [
+                  Container(padding: const EdgeInsets.only(bottom: 8), child: list.value[e].gambar != null ? Image.file(File(list.value[e].gambar!), height: 80, alignment: Alignment.center, isAntiAlias: true) : const Icon(Icons.image, color: Colors.black45, size: 80)),
+                  Text(list.value[e].nama, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
+                  Text(list.value[e].stok != null ? "Stok: ${formatter.format(list.value[e].stok)}" : "Stok: UNLIMITED", style: const TextStyle(fontWeight: FontWeight.w400, fontSize: 15)),
+                ]),
+              ))
+            )) : Expanded(child: Container())).toList(),
+          )).toList(),
         ),
       );
     } else {
@@ -235,7 +240,7 @@ class _ProdukPageState extends State<ProdukPage> {
               child: Row(
                 children: [
                   SizedBox.fromSize(
-                    size: const Size(85, 30),
+                    size: const Size(95, 30),
                     child: DropdownButtonFormField<int>(
                       decoration: const InputDecoration.collapsed(hintText: ''),
                       value: _page,
@@ -251,6 +256,10 @@ class _ProdukPageState extends State<ProdukPage> {
                   Expanded(child: TextFormField(
                     autocorrect: false,
                     autofocus: false,
+                    enableSuggestions: false,
+                    onTapOutside: (event) {
+                      FocusManager.instance.primaryFocus?.unfocus();
+                    },
                     keyboardType: TextInputType.streetAddress,
                     decoration: InputDecoration(
                       border: InputBorder.none,
@@ -291,19 +300,7 @@ class _ProdukPageState extends State<ProdukPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, builder: (context) => ModalProduk(onDone: (Produk? produkDataResult) {
-          if (produkDataResult != null) {
-            showTopSnackBar(
-              // ignore: use_build_context_synchronously
-              Overlay.of(context),
-              const CustomSnackBar.success(
-                message: "Berhasil menyimpan produk",
-              ),
-              displayDuration: const Duration(seconds: 2),
-            );
-            getProduk(reset: true);
-          }
-        })),
+        onPressed: () => showModalProduk(),
         label: const Row(children: [Icon(Icons.add), Text("Tambah Produk Baru")])
       ),
     );
@@ -328,6 +325,7 @@ class _ModalProdukState extends State<ModalProduk> {
   File? _gambar;
   bool _permissionCamera = false;
   bool _permissionStorage = false;
+  late CropController _cropController;
 
   @override
   void initState() {
@@ -337,7 +335,6 @@ class _ModalProdukState extends State<ModalProduk> {
     _inputNamaProdukController = TextEditingController();
     _inputHargaProdukController = TextEditingController();
     _inputStokProdukController = TextEditingController();
-    _requestPermission();
 
     _inputKodeProdukController.text = '';
     _inputNamaProdukController.text = '';
@@ -354,6 +351,11 @@ class _ModalProdukState extends State<ModalProduk> {
         _gambar = File(widget.produk!.gambar!);
       }
     }
+
+    _cropController = CropController(
+      aspectRatio: 1,
+      defaultCrop: const Rect.fromLTRB(0.1, 0.1, 0.9, 0.9)
+    );
   }
   
   @override
@@ -472,7 +474,7 @@ class _ModalProdukState extends State<ModalProduk> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _gambar != null ? 
-                      ElevatedButton(
+                      TextButton.icon(
                         onPressed: () {
                           showDialog(context: context, builder: (BuildContext ctx) {
                             return AlertDialog(
@@ -507,12 +509,12 @@ class _ModalProdukState extends State<ModalProduk> {
                           backgroundColor: MaterialStatePropertyAll(Colors.red[50]),
                           padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
                         ),
-                        child: const Text('Hapus Gambar'),
+                        label: const Text('Hapus Gambar'),
+                        icon: const Icon(Icons.close_sharp)
                       ) : const SizedBox.shrink(),
-                      _permissionCamera || _permissionStorage ? 
-                      ElevatedButton(
+                      TextButton.icon(
                         onPressed: () {
-                          processImage();
+                          chooseImage();
                         },
                         style: ButtonStyle(
                           shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
@@ -521,10 +523,9 @@ class _ModalProdukState extends State<ModalProduk> {
                           backgroundColor: MaterialStatePropertyAll(Colors.green[100]),
                           padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
                         ),
-                        child: Text(_gambar == null ? 'Pilih Gambar' : 'Ganti Gambar'),
+                        icon: const Icon(Icons.image_search),
+                        label: Text(_gambar == null ? 'Pilih Gambar' : 'Ganti Gambar'),
                       )
-                      : 
-                      const SizedBox.shrink()
                     ],
                   )
                 ],
@@ -554,12 +555,21 @@ class _ModalProdukState extends State<ModalProduk> {
     ));
   }
 
-  Future<void> _requestPermission() async {
-    Map<Permission, PermissionStatus> result = await [Permission.storage, Permission.camera].request();
+  Future<bool> _requestPermission() async {
+    if (!Platform.isAndroid && !Platform.isIOS && !Platform.isWindows){
+      setState(() {
+        _permissionStorage = true;
+        _permissionCamera = true;
+      });
+      return true;
+    }
+
+    Map<Permission, PermissionStatus> result = await [Permission.storage, Permission.camera, Permission.photos].request();
     setState(() {
-      _permissionStorage = result[Permission.storage] == PermissionStatus.granted;
+      _permissionStorage = result[Permission.storage] == PermissionStatus.granted && result[Permission.photos] == PermissionStatus.granted;
       _permissionCamera = result[Permission.camera] == PermissionStatus.granted;
     });
+    return _permissionCamera || _permissionStorage;
   }
 
   Future<void> simpanProduk() async {
@@ -571,6 +581,7 @@ class _ModalProdukState extends State<ModalProduk> {
       }
       try {
         Produk produk = Produk(
+          id: widget.produk?.id,
           kode: _inputKodeProdukController.text, 
           nama: _inputNamaProdukController.text, 
           harga: harga, 
@@ -604,80 +615,75 @@ class _ModalProdukState extends State<ModalProduk> {
     return null;
   }
 
-  Future<String?> cropImage(String imagePath) async {
-    const title = "Sesuaikan Gambar";
-    ImageCropper imageCropper = ImageCropper();
-    File? croppedfile = await imageCropper.cropImage(
-      sourcePath: imagePath,
-      aspectRatio: const CropAspectRatio(ratioX: 400, ratioY: 400),
-      aspectRatioPresets: [
-        CropAspectRatioPreset.square
-      ],
-      androidUiSettings: AndroidUiSettings(
-        toolbarTitle: title,
-        toolbarColor: Theme.of(context).primaryColor,
-        toolbarWidgetColor: Colors.white,
-        initAspectRatio: CropAspectRatioPreset.square,
-        lockAspectRatio: true,
-      ),
-      iosUiSettings: const IOSUiSettings(
-        minimumAspectRatio: 1.0,
-        aspectRatioLockEnabled: true,
-        resetAspectRatioEnabled: true,
-        title: title,
-        cancelButtonTitle: "Batal",
-        doneButtonTitle: "Simpan",
-        showCancelConfirmationDialog: true
-      )
-    );
-
-    if (croppedfile != null) {
-      Uint8List bytes = await croppedfile.readAsBytes();
-      Directory documentsDirectory = await getApplicationDocumentsDirectory();
-      String newImagePath = path.join(documentsDirectory.path, "${DateTime.now().millisecondsSinceEpoch}${randomString(3).toUpperCase()}.jpg");
-      File file = File(newImagePath);
-      await file.writeAsBytes(bytes);
-      return newImagePath;
-    }
-    return null;
+  Future<File?> cropImage(String imagePath) async {
+    File? result;
+    await showDialog(context: context, builder: (BuildContext ctx) {
+      return ModalCropImage(imagePath: imagePath, onDone: (res) {
+        result = res;
+      });
+    });
+    return result;
   }
 
-  Future<void> processImage() async {
-    if ((Platform.isAndroid || Platform.isIOS) && _permissionCamera && _permissionStorage) {
+  Future<void> chooseImage() async {
+    await _requestPermission();
+    bool platformWithCamera = Platform.isAndroid || Platform.isIOS;
+    if (_permissionCamera && _permissionStorage && platformWithCamera) {
+      // ignore: use_build_context_synchronously
       showDialog(context: context, builder: (BuildContext ctx) {
         return AlertDialog(
-          title: const Text("Pilih Gambar Dari"),
-          content: Row(
-            children: [
-              TextButton(onPressed: () async {
+          title: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text("Pilih Gambar Dari", style: TextStyle(fontSize: 18))
+          ]),
+          actions: [
+            TextButton.icon(
+              onPressed: () async {
                 File? image = await getImage(ImageSource.camera);
                 if (image != null) {
                   // ignore: use_build_context_synchronously
                   Navigator.pop(ctx);
-                  String? imagePath = await cropImage(image.path);
-                  if (imagePath != null) {
+                  File? imageResult = await cropImage(image.path);
+                  if (imageResult != null) {
                     setState(() {
-                      _gambar = File(imagePath);
+                      _gambar = imageResult;
                     });
                   }
                 }
-              }, child: const Text("Kamera")),
-              const Expanded(child: Row()),
-              TextButton(onPressed: () async {
+              }, 
+              icon: const Icon(Icons.camera_enhance),
+              label: const Text("Kamera")
+            ),
+            TextButton.icon(
+              onPressed: () async {
                 File? image = await getImage(ImageSource.gallery);
                 if (image != null) {
                   // ignore: use_build_context_synchronously
                   Navigator.pop(ctx);
-                  String? imagePath = await cropImage(image.path);
-                  if (imagePath != null) {
+                  File? imageResult = await cropImage(image.path);
+                  if (imageResult != null) {
                     setState(() {
-                      _gambar = File(imagePath);
+                      _gambar = imageResult;
                     });
                   }
                 }
-              }, child: const Text("Galeri")),
-            ],
-          )
+              }, 
+              icon: const Icon(Icons.folder_open),
+              label: const Text("Galeri")
+            )
+          ]
+        );
+      });
+    } else if (!_permissionCamera && !_permissionStorage) {
+      // ignore: use_build_context_synchronously
+      showDialog(context: context, builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: const Text("Izinkan aplikasi mengakses kamera dan galeri/storage"),
+          content: TextButton(
+            onPressed: () async {
+              await openAppSettings();
+            }, 
+            child: const Text("Buka Pengaturan")
+          ),
         );
       });
     } else {
@@ -687,14 +693,111 @@ class _ModalProdukState extends State<ModalProduk> {
       } else if (_permissionCamera) {
         image = await getImage(ImageSource.camera);
       }
+
       if (image != null) {
-        String? imagePath = await cropImage(image.path);
-        if (imagePath != null) {
+        File? imageResult = await cropImage(image.path);
+        if (imageResult != null) {
           setState(() {
-            _gambar = File(imagePath);
+            _gambar = imageResult;
           });
         }
       }
     }
   }
+}
+
+
+class ModalCropImage extends StatefulWidget {
+  final String imagePath;
+  final Function? onDone;
+  const ModalCropImage({super.key, required this.imagePath, this.onDone});
+
+  @override
+  State<ModalCropImage> createState() => _ModalCropImageState();
+}
+
+class _ModalCropImageState extends State<ModalCropImage> {
+  late CropController cropController;
+  late bool cropping;
+
+  @override
+  void initState() {
+    super.initState();
+    cropController = CropController(
+      aspectRatio: 1
+    );
+    cropping = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double width = MediaQuery.of(context).size.width;
+    final double height = MediaQuery.of(context).size.height;
+    return AlertDialog(
+      content: SizedBox(
+        width: (Device.get().isTablet ? height : width) - 100,
+        height: (Device.get().isTablet ? height : width) - 100,
+        child: Column(
+          children: [
+            const Padding(padding: EdgeInsets.only(bottom: 20), child: Text("Sesuaikan Gambar", textAlign: TextAlign.center, style: TextStyle(fontSize: 30, fontWeight: FontWeight.w500))),
+            Expanded(
+              child: CropImage(
+                controller: cropController,
+                image: Image.file(File(widget.imagePath)),
+              )
+            ),
+            Padding(padding: const EdgeInsets.all(10), child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: () async {
+                    cropController.rotateRight();
+                  }, 
+                  icon: const Icon(Icons.rotate_90_degrees_cw_outlined)
+                ),
+                IconButton(
+                  onPressed: () async {
+                    cropController.rotateRight();
+                  }, 
+                  icon: const Icon(Icons.rotate_90_degrees_ccw)
+                ),
+                Padding(padding: const EdgeInsets.only(right: 40, left: 40), child: ElevatedButton(
+                  style: const ButtonStyle(
+                    backgroundColor: MaterialStatePropertyAll(Colors.red),
+                    foregroundColor: MaterialStatePropertyAll(Colors.white),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Batal")
+                )),
+                ElevatedButton(
+                  style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(cropping ? Colors.black12 : Theme.of(context).primaryColorLight)),
+                  onPressed: () async {
+                    if (cropping) return;
+                    setState(() {
+                      cropping = true;
+                    });
+
+                    ui.Image bitmap = await cropController.croppedBitmap();
+                    ByteData? data = await bitmap.toByteData(format: ui.ImageByteFormat.png);
+                    Uint8List bytes = data!.buffer.asUint8List();
+                    Directory tempDir = await getTemporaryDirectory();
+                    String tempImagePath = "${tempDir.path}/${randomString(16)}.jpg";
+                    File result = File(tempImagePath);
+                    await result.writeAsBytes(bytes);
+                    if (widget.onDone!=null) {
+                      widget.onDone!(result);
+                    }
+                    // ignore: use_build_context_synchronously
+                    Navigator.pop(context);
+                  }, 
+                  child: const Text("Crop")
+                )
+              ]
+            ))
+          ]
+        )
+      )
+    );
+  }
+
 }

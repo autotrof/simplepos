@@ -1,13 +1,20 @@
 // ignore_for_file: non_constant_identifier_names
+import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:nanoid/async.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:simplepos/globals.dart';
 import 'package:simplepos/models/model.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:path/path.dart' as path;
 
 import '../db.dart';
 
 class Produk extends Model{
   static const tableName = 'produk';
 
+  int? id;
   late String kode;
   String nama;
   double harga;
@@ -18,17 +25,30 @@ class Produk extends Model{
   int updated_at;
   int? deleted_at;
 
+  static Future<String> getImagePath() async {
+    Directory documentsDirectory = await getApplicationDocumentsDirectory();
+    String imagePath = path.join(documentsDirectory.path, "produk");
+    Directory imagePathDir = Directory(imagePath);
+    bool imagePathDirExists = await imagePathDir.exists();
+    debugPrint(imagePathDirExists.toString());
+    if (!imagePathDirExists) {
+      imagePathDir.create(recursive: true);
+    }
+    return imagePath;
+  }
+
   static Future<String> generateKode () async {
     String prefix = DateTime.now().millisecondsSinceEpoch.toString();
     String randomKey = await customAlphabet('QWERTYUIOPASDFGHJKLZXCVBNM1234567890', 3);
     return prefix + randomKey;
   }
 
-  Produk({this.kode = '', required this.nama, required this.harga, this.stok, this.gambar, this.aktif = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at});
+  Produk({this.id, this.kode = '', required this.nama, required this.harga, this.stok, this.gambar, this.aktif = 0, this.created_at = 0, this.updated_at = 0, this.deleted_at});
 
   @override
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'kode': kode,
       'nama': nama,
       'harga': harga,
@@ -43,7 +63,7 @@ class Produk extends Model{
 
   @override
   String toString() {
-    return 'Produk{kode: $kode, nama: $nama, harga: $harga, stok: $stok, gambar: $gambar, aktif: $aktif, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
+    return 'Produk{id: $id, kode: $kode, nama: $nama, harga: $harga, stok: $stok, gambar: $gambar, aktif: $aktif, created_at: $created_at, updated_at: $updated_at, deleted_at: $deleted_at}';
   }
 
   static Produk fromMap(Map<String, dynamic> data) {
@@ -55,6 +75,7 @@ class Produk extends Model{
     }
     
     Produk p = Produk(
+      id: data["id"],
       nama: data["nama"],
       harga: double.parse(data["harga"].toString()),
       stok: stok,
@@ -68,9 +89,18 @@ class Produk extends Model{
     return p;
   }
 
+  Future<String> storeImage() async {
+    String imageDirectoryPath = await getImagePath();
+    String newPathGambar = path.join(imageDirectoryPath, "${DateTime.now().millisecondsSinceEpoch}${randomString(3).toUpperCase()}.jpg");
+    debugPrint(newPathGambar);
+    await File(gambar!).rename(newPathGambar);
+    return newPathGambar;
+  }
+
   @override
   Future<Produk> save() async {
     Database db = await getDatabase();
+
     final int now = DateTime.now().millisecondsSinceEpoch;
     if (created_at == 0) {
       created_at = now;
@@ -79,8 +109,34 @@ class Produk extends Model{
     if (kode == '') {
       kode = await generateKode();
     }
+    debugPrint("IDDD");
+    debugPrint(id.toString());
     await db.transaction((txn) async {
-      await txn.insert(tableName, toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      // create
+      if (id == null) {
+        debugPrint("CREATE PRODUK");
+        Map<String, dynamic> data = toMap();
+        data.remove('id');
+        data.remove('deleted_at');
+        if (data['gambar'] != null) {
+          data['gambar'] = await storeImage();
+        }
+        int insertedId = await txn.insert(tableName, data);
+        id = insertedId;
+      }
+      // update
+      else {
+        debugPrint("UPDATE PRODUK");
+        final List<Map> temp = await txn.query(tableName, where: "id = ?", whereArgs: [id]);
+        final Map originalData = temp[0];
+        if (originalData['gambar'] != gambar && gambar != null) {
+          gambar = await storeImage();
+        }
+        await txn.update(tableName, toMap(), where: "id = ?", whereArgs: [id]);
+        if (originalData['gambar'] != gambar && gambar != null && originalData['gambar'] != null) {
+          await File(originalData['gambar']).delete();
+        }
+      }
     });
     return this;
   }

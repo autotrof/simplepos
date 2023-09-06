@@ -29,15 +29,16 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
 
   const sql1 = '''
     CREATE TABLE IF NOT EXISTS produk (
-      kode VARCHAR(16) PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kode VARCHAR(16),
       nama VARCHAR(255) NOT NULL,
       gambar VARCHAR(255) NULL,
       harga REAL NOT NULL,
-      stok INT NULL,
-      aktif INT DEFAULT 1,
-      created_at INT DEFAULT 0,
-      updated_at INT DEFAULT 0,
-      deleted_at INT NULL
+      stok INTEGER NULL,
+      aktif INTEGER DEFAULT 1,
+      created_at INTEGER DEFAULT 0,
+      updated_at INTEGER DEFAULT 0,
+      deleted_at INTEGER NULL
     )
   ''';
   await db.execute(sql1);
@@ -60,18 +61,18 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
 
   const sql3 = '''
     CREATE TABLE IF NOT EXISTS pesanan_item (
-      kode_produk VARCHAR(16),
-      kode_pesanan VARCHAR(16),
-      urutan INT NOT NULL DEFAULT 1,
+      id_produk INTEGER,
+      kode_pesanan VARCHAR(16) UNIQUE,
+      urutan INTEGER NOT NULL DEFAULT 1,
       harga REAL NOT NULL,
-      jumlah INT NOT NULL,
+      jumlah INTEGER NOT NULL,
       subtotal REAL NOT NULL,
-      created_at INT DEFAULT 0,
-      updated_at INT DEFAULT 0,
+      created_at INTEGER DEFAULT 0,
+      updated_at INTEGER DEFAULT 0,
 
-      FOREIGN KEY(kode_produk) REFERENCES produk(kode) ON UPDATE CASCADE ON DELETE CASCADE,
+      FOREIGN KEY(id_produk) REFERENCES produk(id) ON UPDATE CASCADE ON DELETE CASCADE,
       FOREIGN KEY(kode_pesanan) REFERENCES pesanan(kode) ON UPDATE CASCADE ON DELETE CASCADE,
-      PRIMARY KEY (kode_produk, kode_pesanan)
+      PRIMARY KEY (id_produk, kode_pesanan)
     )
   ''';
   await db.execute(sql3);
@@ -80,13 +81,13 @@ Future<void> initDb({bool refresh = false, withSampleData = false}) async {
     CREATE TABLE IF NOT EXISTS pengaturan (
       key VARCHAR(125) PRIMARY KEY,
       value VARCHAR(255),
-      created_at INT DEFAULT 0,
-      updated_at INT DEFAULT 0
+      created_at INTEGER DEFAULT 0,
+      updated_at INTEGER DEFAULT 0
     )
   ''';
   await db.execute(sql4);
 
-  if (kDebugMode && withSampleData) {
+  if (kDebugMode && withSampleData && refresh) {
     initSampleData();
   }
 }

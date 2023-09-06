@@ -11,11 +11,24 @@
             "deviceId": "emulator-5554"
         },
         {
+            "name": "Tablet IOS",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "89B493A7-F2CD-45AE-96DE-DF4004D005A4"
+        },
+        {
             "name": "HP",
             "request": "launch",
             "type": "dart",
             "deviceId": "624DEACB-C21A-43DE-B703-B34AC5CBA140"
         },
+        {
+            "name": "MACOS",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "macos"
+        },
+
     ],
     "compounds": [
         {

@@ -49,7 +49,7 @@ dependencies:
   nanoid: ^1.0.0
   flutter_jailbreak_detection:
   image_picker: ^0.8.4+4
-  image_cropper:
+  crop_image:
   permission_handler:
   flutter_device_type:
 
