@@ -32,7 +32,7 @@ class Produk extends Model{
     bool imagePathDirExists = await imagePathDir.exists();
     debugPrint(imagePathDirExists.toString());
     if (!imagePathDirExists) {
-      imagePathDir.create(recursive: true);
+      await imagePathDir.create(recursive: true);
     }
     return imagePath;
   }
@@ -109,12 +109,9 @@ class Produk extends Model{
     if (kode == '') {
       kode = await generateKode();
     }
-    debugPrint("IDDD");
-    debugPrint(id.toString());
     await db.transaction((txn) async {
       // create
       if (id == null) {
-        debugPrint("CREATE PRODUK");
         Map<String, dynamic> data = toMap();
         data.remove('id');
         data.remove('deleted_at');
@@ -126,7 +123,6 @@ class Produk extends Model{
       }
       // update
       else {
-        debugPrint("UPDATE PRODUK");
         final List<Map> temp = await txn.query(tableName, where: "id = ?", whereArgs: [id]);
         final Map originalData = temp[0];
         if (originalData['gambar'] != gambar && gambar != null) {

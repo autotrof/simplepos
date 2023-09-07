@@ -17,10 +17,10 @@
             "deviceId": "89B493A7-F2CD-45AE-96DE-DF4004D005A4"
         },
         {
-            "name": "HP",
+            "name": "Iphone 14",
             "request": "launch",
             "type": "dart",
-            "deviceId": "624DEACB-C21A-43DE-B703-B34AC5CBA140"
+            "deviceId": "BA56F1E4-59E5-4E9A-9BB4-CFD55D01FCB6"
         },
         {
             "name": "MACOS",
@@ -29,13 +29,5 @@
             "deviceId": "macos"
         },
 
-    ],
-    "compounds": [
-        {
-            "name": "All",
-            "configurations": [
-                "Tablet", "HP"
-            ]
-        }
     ]
 }

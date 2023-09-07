@@ -25,6 +25,7 @@ class ProdukPage extends StatefulWidget {
 
 class _ProdukPageState extends State<ProdukPage> {
   late List<Produk> _items;
+  late List<bool> _longPressState;
   late List<String> _sort;
   late int _page;
   late List<int> _pageList;
@@ -41,28 +42,8 @@ class _ProdukPageState extends State<ProdukPage> {
     _pageList = [];
     _sort = ['kode', 'desc'];
     _items = <Produk>[];
+    _longPressState = <bool>[];
     getProduk();
-  }
-
-  Future<void> hapusProduk(Produk produk) async {
-    final bool confirmed = await alertConfirmation(context: context, text: "Anda yakin akan menghapus data produk ${produk.nama} ?");
-    if (confirmed) {
-      dynamic deleteResult = await produk.delete();
-      if (deleteResult == true) {
-        // ignore: use_build_context_synchronously
-        showTopSnackBar(
-            // ignore: use_build_context_synchronously
-            Overlay.of(context),
-            CustomSnackBar.success(
-              message: "Berhasil menghapus produk ${produk.nama}",
-            ),
-        );
-        getProduk();
-      } else {
-        // ignore: use_build_context_synchronously
-        alertError(context: context, text: deleteResult.toString());
-      }
-    }
   }
 
   void getProduk({bool reset = false}) async {
@@ -71,6 +52,7 @@ class _ProdukPageState extends State<ProdukPage> {
     }
     Map<String, dynamic> produkData = await Produk.get(search: _cariProdukController.text, sort: _sort, page: _page, limit: Device.get().isTablet ? 100 : 50);
     _items = produkData["produkList"];
+    _longPressState = _items.map((e) => false).toList();
     _pageList.clear();
     for (int i = 1; i <= produkData["totalPage"]; i++) {
       _pageList.add(i);
@@ -151,6 +133,12 @@ class _ProdukPageState extends State<ProdukPage> {
     });
   }
 
+  void showModalHapusProduk(Produk produk) {
+    showDialog(context: context, builder: (BuildContext context) {
+      return ModalHapusProduk(produk, onDone: () => getProduk());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     late Widget tampilan;
@@ -169,9 +157,9 @@ class _ProdukPageState extends State<ProdukPage> {
             children: columns.map((e) => list.value.asMap().containsKey(e) ? Expanded(child: Padding(padding: const EdgeInsets.all(4), child: GestureDetector(
               onTap: () => showModalProduk(produk: list.value[e]), 
               child: Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.only(left: 10, right: 10, top: 20, bottom: 20),
                 clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: Colors.black54, width: 0.5)),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: Colors.grey[400]!, width: 0.5)),
                 child: Column(children: [
                   Container(padding: const EdgeInsets.only(bottom: 8), child: list.value[e].gambar != null ? Image.file(File(list.value[e].gambar!), height: 80, alignment: Alignment.center, isAntiAlias: true) : const Icon(Icons.image, color: Colors.black45, size: 80)),
                   Text(list.value[e].nama, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16)),
@@ -187,12 +175,16 @@ class _ProdukPageState extends State<ProdukPage> {
         children: _items.asMap().entries.map((e){
           return Column(
             children: [
-              GestureDetector(
+              Material( child: InkWell(
+                hoverColor: Colors.grey[150],
+                highlightColor: Colors.grey[350],
+                splashColor: Theme.of(context).primaryColorLight,
                 onTap: () => showModalProduk(produk: e.value),
+                onLongPress: () => showModalHapusProduk(e.value),
                 child: Container(
                   alignment: Alignment.centerLeft,
                   padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.black12))),
+                  decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black12))),
                   child: Row(
                     children: [
                       Container(
@@ -208,16 +200,16 @@ class _ProdukPageState extends State<ProdukPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(e.value.nama, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 17))),
+                            Padding(padding: const EdgeInsets.only(bottom: 3), child: Flexible(child: Text(e.value.nama, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500, fontSize: 17)))),
                             Text("Sisa : ${e.value.stok ?? 'UNLIMITED'}", style: const TextStyle(color: Colors.black87)),
                           ]
                         )
                       ),
-                      Text(formatter.format(e.value.harga), style: const TextStyle(fontWeight: FontWeight.w500),)
+                      Text("Rp ${formatter.format(e.value.harga)}", style: const TextStyle(fontWeight: FontWeight.w500),)
                     ],
                   ),
                 ),
-              ),
+              )),
               e.key == _items.length - 1 ? const Padding(padding: EdgeInsets.only(bottom: 80)) : const SizedBox.shrink()
             ],
           );
@@ -227,12 +219,12 @@ class _ProdukPageState extends State<ProdukPage> {
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(color: Colors.grey[200]),
+        decoration: BoxDecoration(color: Colors.grey[100]),
         padding: const EdgeInsets.all(8),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.only(left: 10),
+              padding: EdgeInsets.only(left: 10, top: Device.get().isTablet ? 10 : 0),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(bottom: BorderSide(color: Colors.black26, ))
@@ -325,7 +317,6 @@ class _ModalProdukState extends State<ModalProduk> {
   File? _gambar;
   bool _permissionCamera = false;
   bool _permissionStorage = false;
-  late CropController _cropController;
 
   @override
   void initState() {
@@ -351,11 +342,6 @@ class _ModalProdukState extends State<ModalProduk> {
         _gambar = File(widget.produk!.gambar!);
       }
     }
-
-    _cropController = CropController(
-      aspectRatio: 1,
-      defaultCrop: const Rect.fromLTRB(0.1, 0.1, 0.9, 0.9)
-    );
   }
   
   @override
@@ -372,7 +358,7 @@ class _ModalProdukState extends State<ModalProduk> {
               Container(
                 alignment: Alignment.topCenter,
                 margin: const EdgeInsets.only(bottom: 20), 
-                child: const Text('Form Produk', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'barlow', fontWeight: FontWeight.w500, fontSize: 24))
+                child: const Flexible(flex: 1, child: Text('Form Produk', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'barlow', fontWeight: FontWeight.w500, fontSize: 24)))
               ),
               Container(
                 margin: const EdgeInsets.only(bottom: 15),
@@ -474,11 +460,11 @@ class _ModalProdukState extends State<ModalProduk> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _gambar != null ? 
-                      TextButton.icon(
+                      Padding(padding: const EdgeInsets.only(bottom: 5), child: TextButton.icon(
                         onPressed: () {
                           showDialog(context: context, builder: (BuildContext ctx) {
                             return AlertDialog(
-                              title: const Text("Anda yakin akan menghapus gambar produk ini ?"),
+                              title: const Flexible(child: Text("Anda yakin akan menghapus gambar produk ini ?")),
                               content: Row(
                                 children: [
                                   TextButton(
@@ -503,25 +489,25 @@ class _ModalProdukState extends State<ModalProduk> {
                           });
                         },
                         style: ButtonStyle(
-                          shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
                           foregroundColor: MaterialStatePropertyAll(Colors.red[800]),
                           elevation: MaterialStateProperty.all(1),
                           backgroundColor: MaterialStatePropertyAll(Colors.red[50]),
-                          padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
+                          side: MaterialStatePropertyAll(BorderSide(color: Colors.red[300]!, width: 1)),
+                          shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10)))
                         ),
                         label: const Text('Hapus Gambar'),
                         icon: const Icon(Icons.close_sharp)
-                      ) : const SizedBox.shrink(),
+                      )) : const SizedBox.shrink(),
                       TextButton.icon(
                         onPressed: () {
                           chooseImage();
                         },
                         style: ButtonStyle(
-                          shape: MaterialStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+                          shape: MaterialStatePropertyAll(ContinuousRectangleBorder(borderRadius: BorderRadius.circular(10))),
                           foregroundColor: MaterialStatePropertyAll(Colors.green[800]),
                           elevation: MaterialStateProperty.all(1),
                           backgroundColor: MaterialStatePropertyAll(Colors.green[100]),
-                          padding: const MaterialStatePropertyAll(EdgeInsets.only(top: 10, bottom: 10, left: 20, right: 20))
+                          side: MaterialStatePropertyAll(BorderSide(color: Colors.green[400]!, width: 1))
                         ),
                         icon: const Icon(Icons.image_search),
                         label: Text(_gambar == null ? 'Pilih Gambar' : 'Ganti Gambar'),
@@ -564,9 +550,14 @@ class _ModalProdukState extends State<ModalProduk> {
       return true;
     }
 
-    Map<Permission, PermissionStatus> result = await [Permission.storage, Permission.camera, Permission.photos].request();
+    Map<Permission, PermissionStatus> result = await [Permission.mediaLibrary, Permission.photos, Permission.storage, Permission.camera, Permission.photos].request();
+    debugPrint("result permission = ${result.toString()}");
     setState(() {
-      _permissionStorage = result[Permission.storage] == PermissionStatus.granted && result[Permission.photos] == PermissionStatus.granted;
+      _permissionStorage = 
+        result[Permission.storage] == PermissionStatus.granted && 
+        result[Permission.photos] == PermissionStatus.granted &&
+        result[Permission.mediaLibrary] == PermissionStatus.granted
+        ;
       _permissionCamera = result[Permission.camera] == PermissionStatus.granted;
     });
     return _permissionCamera || _permissionStorage;
@@ -633,7 +624,7 @@ class _ModalProdukState extends State<ModalProduk> {
       showDialog(context: context, builder: (BuildContext ctx) {
         return AlertDialog(
           title: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Text("Pilih Gambar Dari", style: TextStyle(fontSize: 18))
+            Flexible(child: Text("Pilih Gambar Dari", style: TextStyle(fontSize: 18)))
           ]),
           actions: [
             TextButton.icon(
@@ -677,7 +668,7 @@ class _ModalProdukState extends State<ModalProduk> {
       // ignore: use_build_context_synchronously
       showDialog(context: context, builder: (BuildContext ctx) {
         return AlertDialog(
-          title: const Text("Izinkan aplikasi mengakses kamera dan galeri/storage"),
+          title: const Flexible(child: Text("Izinkan aplikasi mengakses kamera dan galeri/storage")),
           content: TextButton(
             onPressed: () async {
               await openAppSettings();
@@ -707,6 +698,76 @@ class _ModalProdukState extends State<ModalProduk> {
 }
 
 
+class ModalHapusProduk extends StatefulWidget {
+  final Produk produk;
+  final Function? onDone;
+  const ModalHapusProduk(this.produk, {super.key, this.onDone});
+
+  @override
+  State<ModalHapusProduk> createState() => _ModalHapusProdukState();
+}
+
+class _ModalHapusProdukState extends State<ModalHapusProduk> {
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      content: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          widget.produk.gambar != null ? 
+          Padding(
+            padding: const EdgeInsets.only(right: 10), 
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(55),
+              child: Image.file(File(widget.produk.gambar!), width: 55, height: 55)
+            )) 
+          : const SizedBox.shrink(),
+          Flexible(child: Text("Anda yakin akan menghapus data ${widget.produk.nama}?"))
+        ]
+      ),
+      actions: [
+        Padding(padding: const EdgeInsets.only(right: 20), child: TextButton(
+          style: const ButtonStyle(
+            backgroundColor: MaterialStatePropertyAll(Colors.transparent)
+          ),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text("Batal")
+        )),
+        TextButton(
+          style: ButtonStyle(
+            backgroundColor: MaterialStatePropertyAll(Colors.red[100]),
+            foregroundColor: MaterialStatePropertyAll(Colors.red[600])
+          ),
+          onPressed: () async {
+            dynamic deleteResult = await widget.produk.delete();
+            if (deleteResult == true) {
+              // ignore: use_build_context_synchronously
+              showTopSnackBar(
+                  // ignore: use_build_context_synchronously
+                  Overlay.of(context),
+                  CustomSnackBar.success(
+                    message: "Berhasil menghapus produk ${widget.produk.nama}",
+                  ),
+              );
+              if (widget.onDone != null) {
+                await widget.onDone!();
+              }
+              // ignore: use_build_context_synchronously
+              Navigator.pop(context);
+            } else {
+              // ignore: use_build_context_synchronously
+              alertError(context: context, text: deleteResult.toString());
+            }
+          },
+          child: const Text("Ya, hapus produk")
+        ),
+      ],
+    );
+  }
+}
+
 class ModalCropImage extends StatefulWidget {
   final String imagePath;
   final Function? onDone;
@@ -719,6 +780,7 @@ class ModalCropImage extends StatefulWidget {
 class _ModalCropImageState extends State<ModalCropImage> {
   late CropController cropController;
   late bool cropping;
+  final bool isPhone = Device.get().isPhone;
 
   @override
   void initState() {
@@ -735,11 +797,11 @@ class _ModalCropImageState extends State<ModalCropImage> {
     final double height = MediaQuery.of(context).size.height;
     return AlertDialog(
       content: SizedBox(
-        width: (Device.get().isTablet ? height : width) - 100,
-        height: (Device.get().isTablet ? height : width) - 100,
+        width: (Device.get().isTablet ? height : width) - (isPhone ? 0 : 100),
+        height: (Device.get().isTablet ? height : width) - (isPhone ? 0 : 100),
         child: Column(
           children: [
-            const Padding(padding: EdgeInsets.only(bottom: 20), child: Text("Sesuaikan Gambar", textAlign: TextAlign.center, style: TextStyle(fontSize: 30, fontWeight: FontWeight.w500))),
+            const Padding(padding: EdgeInsets.only(bottom: 20), child: Flexible(child: Text("Sesuaikan Gambar", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500)))),
             Expanded(
               child: CropImage(
                 controller: cropController,
@@ -761,14 +823,14 @@ class _ModalCropImageState extends State<ModalCropImage> {
                   }, 
                   icon: const Icon(Icons.rotate_90_degrees_ccw)
                 ),
-                Padding(padding: const EdgeInsets.only(right: 40, left: 40), child: ElevatedButton(
+                !isPhone ? Padding(padding: const EdgeInsets.only(right: 40, left: 40), child: ElevatedButton(
                   style: const ButtonStyle(
                     backgroundColor: MaterialStatePropertyAll(Colors.red),
                     foregroundColor: MaterialStatePropertyAll(Colors.white),
                   ),
                   onPressed: () => Navigator.pop(context),
                   child: const Text("Batal")
-                )),
+                )) : const SizedBox.shrink(),
                 ElevatedButton(
                   style: ButtonStyle(backgroundColor: MaterialStatePropertyAll(cropping ? Colors.black12 : Theme.of(context).primaryColorLight)),
                   onPressed: () async {
